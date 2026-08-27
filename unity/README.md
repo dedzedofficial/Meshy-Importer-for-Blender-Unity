@@ -1,80 +1,46 @@
-# FISHHWB Meshy .meshy Importer for Unity
+# FISHHWB Meshy Importer for Unity
 
-**Created by FISHHWB — v1.1.1**
+## Installation
 
-This is a Unity Package Manager package for importing Meshy `.meshy` containers.
+### 1. Install UnityGLTF first
 
-## Install directly from GitHub
-
-This repository is structured so the Unity package lives in `/unity`.
+This package requires **UnityGLTF 2.21.0**. Unity Package Manager does not accept a Git URL as the version value of a package dependency, so UnityGLTF must be added to the Unity project separately before installing this importer.
 
 In Unity:
 
-1. Open **Window → Package Manager**.
+1. Open **Window > Package Manager**.
 2. Click **+**.
-3. Choose **Add package from git URL...**
-4. Paste:
+3. Select **Add package from git URL**.
+4. Enter:
 
-```text
-https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity
-```
+`https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0`
 
-5. Click **Add**.
+5. Click **Add** and wait for UnityGLTF to finish installing.
 
-Unity supports Git package URLs and repository subfolder paths when the selected subfolder contains a `package.json`. Git must be installed and available to Unity.
+UnityGLTF's own documentation confirms that Git installation and release tags are supported. See the official UnityGLTF documentation: https://github.com/KhronosGroup/UnityGLTF
 
-## UnityGLTF is installed automatically
+### 2. Install FISHHWB Meshy Importer
 
-The package declares UnityGLTF 2.21.0 as a Git dependency:
+After UnityGLTF is installed, add this package through **Window > Package Manager > + > Add package from git URL**:
 
-```text
-https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0
-```
+`https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity`
 
-You **do not need to install UnityGLTF manually**.
-
-UnityGLTF 2.21.0 supports Unity 2021.3+ and is itself a UPM-compatible Git package.
-
-## Import a `.meshy`
-
-After the package is installed:
-
-**Tools → Meshy → Convert .meshy to GLB...**
-
-Select the `.meshy` file.
-
-The importer:
-
-1. Reads the `.meshy` container.
-2. Decodes the GLB data locally.
-3. Writes a `.glb` beside the source file.
-4. Refreshes Unity's AssetDatabase.
-5. Lets UnityGLTF import the resulting GLB.
-
-The original `.meshy` file is not modified.
-
-## Batch import
-
-Put your `.meshy` files inside the Unity project's `Assets` folder and use:
-
-**Tools → Meshy → Convert All .meshy In Assets**
-
-## Requirements
-
-- Unity **2021.3 LTS or newer**
-- Git installed and available in PATH
-- Internet access on first package installation so Unity can fetch the Git dependencies
-- UnityGLTF 2.21.0 is pulled automatically by the package
+The package declares UnityGLTF as version `2.21.0`, allowing Unity's Package Manager to validate the dependency correctly.
 
 ## Important
 
-The `.meshy` decoder is based on the current reverse-engineered `.meshy` container format. If Meshy changes that format, a future importer update may be required.
+If Unity reports that `org.khronos.unitygltf` is missing, install UnityGLTF using the Git URL above before installing this package.
 
-**Created by FISHHWB**
+## Support / Discord
 
+For support, updates, and community discussion, join the FISHHWB Discord:
 
-## Support & Disclaimer
+https://discord.gg/vCcsnX4HQP
 
-Official FISHHWB support/community Discord: https://discord.gg/vCcsnX4HQP
+## Modification Disclaimer
 
-**Important:** FISHHWB is responsible only for the original, unmodified release. Any modifications, patches, forks, replacements, or other changes made by anyone other than FISHHWB are the responsibility of the person making those changes. FISHHWB is not responsible for bugs, errors, crashes, compatibility problems, data loss, or other issues caused by third-party changes. Please use the official unmodified release when requesting support. See the repository `DISCLAIMER.md` for the full notice.
+FISHHWB provides support for the original, unmodified version of this package. If you modify, replace, patch, fork, redistribute, or otherwise alter any part of the system, FISHHWB is not responsible for problems caused by those changes.
+
+Issues resulting from third-party modifications, incompatible package versions, altered scripts, manual edits, unsupported Unity versions, or other changes outside the original release are not the responsibility of FISHHWB.
+
+If you encounter an issue, please reproduce it using the original, unmodified release before reporting it as a FISHHWB issue.
