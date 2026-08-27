@@ -1,0 +1,12 @@
+{
+  "name": "FISHHWB Meshy Importer for Blender & Unity",
+  "created_by": "FISHHWB",
+  "version": "1.1.2",
+  "repository": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity",
+  "unity": {
+    "package_name": "com.fishhwb.meshy-importer",
+    "git_url": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity",
+    "unitygltf": "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0"
+  },
+  "discord": "https://discord.gg/vCcsnX4HQP"
+}
