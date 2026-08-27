@@ -1,4 +1,4 @@
-# Meshy .meshy Importer for Blender — v1.1.0
+# Meshy .meshy Importer for Blender - v1.1.0
 
 Adds:
 

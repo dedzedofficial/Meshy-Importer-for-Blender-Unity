@@ -18,16 +18,48 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             EditorUtility.DisplayDialog(
                 "FISHHWB Meshy Importer",
-                "Created by FISHHWB\\n\\n" +
-                "Meshy .meshy -> GLB importer for Unity.\\n" +
-                "UnityGLTF is installed automatically as a UPM Git dependency.\\n\\n" +
+                "Created by FISHHWB\n\n" +
+                "Meshy .meshy -> GLB importer for Unity.\n" +
+                "UnityGLTF is installed separately at the project level.\n" +
+                "Use Tools > Meshy > Install UnityGLTF 2.21.0 before importing models.\n\n" +
                 RepositoryUrl,
                 "OK");
         }
 
         private const string UnityGLTFUrl =
             "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0";
-[MenuItem("Tools/Meshy/Convert .meshy to GLB...")]
+
+        [MenuItem("Tools/Meshy/Install UnityGLTF 2.21.0")]
+        public static void InstallUnityGLTF()
+        {
+            var request = Client.Add(UnityGLTFUrl);
+            void CheckRequest()
+            {
+                if (!request.IsCompleted)
+                    return;
+
+                EditorApplication.update -= CheckRequest;
+
+                if (request.Status == StatusCode.Success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "UnityGLTF Installed",
+                        "UnityGLTF 2.21.0 has been added to this project.\n\n" +
+                        "You can now convert .meshy files and import the resulting GLB models.",
+                        "OK");
+                }
+                else
+                {
+                    string message = request.Error != null ? request.Error.message : "Unknown Package Manager error.";
+                    Debug.LogError("FISHHWB Meshy Importer: UnityGLTF installation failed.\n" + message);
+                    EditorUtility.DisplayDialog("UnityGLTF Installation Failed", message, "OK");
+                }
+            }
+
+            EditorApplication.update += CheckRequest;
+        }
+
+        [MenuItem("Tools/Meshy/Convert .meshy to GLB...")]
         public static void ConvertOne()
         {
             string path = EditorUtility.OpenFilePanel("Select Meshy model", "", "meshy");

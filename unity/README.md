@@ -2,34 +2,37 @@
 
 ## Installation
 
-### 1. Install UnityGLTF first
+### 1. Install this package
 
-This package requires **UnityGLTF 2.21.0**. Unity Package Manager does not accept a Git URL as the version value of a package dependency, so UnityGLTF must be added to the Unity project separately before installing this importer.
-
-In Unity:
-
-1. Open **Window > Package Manager**.
-2. Click **+**.
-3. Select **Add package from git URL**.
-4. Enter:
-
-`https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0`
-
-5. Click **Add** and wait for UnityGLTF to finish installing.
-
-UnityGLTF's own documentation confirms that Git installation and release tags are supported. See the official UnityGLTF documentation: https://github.com/KhronosGroup/UnityGLTF
-
-### 2. Install FISHHWB Meshy Importer
-
-After UnityGLTF is installed, add this package through **Window > Package Manager > + > Add package from git URL**:
+In Unity, open **Window > Package Manager > + > Add package from git URL** and enter:
 
 `https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity`
 
-The package declares UnityGLTF as version `2.21.0`, allowing Unity's Package Manager to validate the dependency correctly.
+This package intentionally has **no UnityGLTF package dependency in its `package.json`**. Unity does not support Git dependencies between packages; Git dependencies must be declared by the Unity project itself.
 
-## Important
+### 2. Install UnityGLTF
 
-If Unity reports that `org.khronos.unitygltf` is missing, install UnityGLTF using the Git URL above before installing this package.
+After the FISHHWB importer has been added, use:
+
+**Tools > Meshy > Install UnityGLTF 2.21.0**
+
+The importer will add the official UnityGLTF Git dependency to your project's `Packages/manifest.json`:
+
+`https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0`
+
+UnityGLTF is required to turn the generated `.glb` file into a usable Unity model. The FISHHWB importer itself only decodes the `.meshy` container into GLB.
+
+You can also add UnityGLTF manually through Package Manager using the same Git URL.
+
+### 3. Import a model
+
+Use **Tools > Meshy > Convert .meshy to GLB...** for an individual model, or **Tools > Meshy > Convert All .meshy In Assets** for models already inside your Unity project's `Assets` folder.
+
+The resulting `.glb` will be imported by UnityGLTF.
+
+### Important
+
+If UnityGLTF is not installed, the FISHHWB importer can still convert the `.meshy` file to `.glb`, but Unity will not have a glTF importer available to turn that GLB into a Unity model. Install UnityGLTF first or use **Tools > Meshy > Install UnityGLTF 2.21.0**.
 
 ## Support / Discord
 

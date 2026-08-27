@@ -10,7 +10,7 @@ Repository:
 
 https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity
 
-## Unity — Git Loader
+## Unity - Git Loader
 
 Install the Unity package directly from Unity Package Manager:
 
@@ -20,11 +20,13 @@ https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/uni
 
 Go to **Window → Package Manager → + → Add package from git URL...**
 
-The Unity package automatically pulls UnityGLTF 2.21.0 as a Git dependency, so there is no separate UnityGLTF installation step.
+Unity does not support Git dependencies declared inside another package, so UnityGLTF is **not** pulled in automatically. After installing this package, use **Tools → Meshy → Install UnityGLTF 2.21.0** (or add the UnityGLTF Git URL to your project manually) before importing any models.
 
 ## Unity usage
 
 After installation:
+
+**Tools → Meshy → Install UnityGLTF 2.21.0** (one-time setup)
 
 **Tools → Meshy → Convert .meshy to GLB...**
 
@@ -76,4 +78,4 @@ The `.meshy` decoding method is based on the currently understood/reverse-engine
 
 ## Version
 
-**v1.1.2**
+**v1.1.0**

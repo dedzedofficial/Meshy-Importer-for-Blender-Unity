@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Meshy .meshy Importer",
-    "author": "OpenAI",
+    "author": "FISHHWB",
     "version": (1, 1, 0),
     "blender": (4, 2, 0),
     "location": "File > Import > Meshy Model (.meshy)",
@@ -56,20 +56,6 @@ def _gmul(a, b):
         a = ((a << 1) ^ 0x11B) if a & 0x80 else (a << 1)
         b >>= 1
     return r & 255
-
-def _expand_key(key):
-    nk, nb, nr = 8, 4, 14
-    w = [list(key[i:i+4]) for i in range(0, 32, 4)]
-    for i in range(nk, nb*(nr+1)):
-        t = w[i-1][:]
-        if i % nk == 0:
-            t = t[1:] + t[:1]
-            t = [_SBOX[x] for x in t]
-            t[0] ^= _RCON[i//nk]
-        elif i % nk == 4:
-            t = [_SBOX[x] for x in t]
-        w.append([w[i-nk][j] ^ t[j] for j in range(4)])
-    return [sum(w[4*r+i] for i in range(4)) for r in range(nr+1) for _ in [0]]
 
 # Return round keys as 16-byte chunks.
 def _round_keys(key):
