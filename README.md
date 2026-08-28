@@ -48,9 +48,18 @@ Then use:
 
 **File → Import → Meshy Model (.meshy)**
 
-## How to get a `.meshy`
+## How to get a .meshy file
 
-`.meshy` is a Meshy container format rather than a normal public Meshy export option. Do not simply rename a `.glb` to `.meshy`; the container structure is different.
+Open your model in Meshy in Chrome.
+Open Developer Tools (F12 or Ctrl+Shift+I).
+Select Network.
+Reload/open the model so the model assets are requested.
+Use the Network search/filter to search for model.
+Identify the model asset/request used by Meshy.
+Save the response to a file with the .meshy extension.
+Put the resulting .meshy file into the importer.
+
+Do not simply rename a GLB/FBX/OBJ file to .meshy. The importer expects the actual Meshy model payload.
 
 ## Attribution
 
