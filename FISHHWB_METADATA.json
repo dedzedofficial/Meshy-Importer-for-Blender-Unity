@@ -1,12 +1,38 @@
 {
-  "name": "FISHHWB Meshy Importer for Blender & Unity",
+  "name": "Meshy Importer for Blender & Unity",
   "created_by": "FISHHWB",
   "version": "1.1.0",
   "repository": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity",
+  "patreon": "https://www.patreon.com/cw/DedZed",
+  "keywords": [
+    ".meshy",
+    ".meshy Blender importer",
+    ".meshy Unity importer",
+    "3D assets",
+    "3D model importer",
+    "Blender",
+    "Blender add-on",
+    "Blender extension",
+    "GLB",
+    "GLTF",
+    "Meshy",
+    "Meshy AI",
+    "Meshy model importer",
+    "Meshy to Blender",
+    "Meshy to Unity",
+    "Unity",
+    "Unity ScriptedImporter",
+    "custom Unity Asset Pipeline importer",
+    "game development"
+  ],
   "unity": {
     "package_name": "com.fishhwb.meshy-importer",
     "git_url": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity",
     "unitygltf": "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0"
   },
-  "discord": "https://discord.gg/vCcsnX4HQP"
+  "discord": "https://discord.gg/vCcsnX4HQP",
+  "support": {
+    "patreon": "https://www.patreon.com/cw/DedZed",
+    "discord": "https://discord.gg/vCcsnX4HQP"
+  }
 }

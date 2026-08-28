@@ -1,51 +1,57 @@
-# Meshy .meshy Importer for Blender - v1.1.0
+# Meshy Importer for Blender & Unity — Blender
 
-Adds:
+**Version 1.1.0**
+
+This Blender extension adds:
 
 **File → Import → Meshy Model (.meshy)**
 
-The add-on reads the Meshy `.meshy` container, decrypts its encrypted GLB prefix locally, reconstructs the GLB, fixes the GLB total-length field, and hands it to Blender's native glTF importer.
-
-## Blender compatibility
-Blender 5.2+ is recommended. Blender 5.2 added glTF meshopt support, which is important because Meshy's decrypted GLB uses `EXT_meshopt_compression`.
+It reads the Meshy `.meshy` container locally, decrypts the encrypted GLB prefix, reconstructs the GLB, fixes the GLB total-length field, and hands the result to Blender's native glTF importer.
 
 ## Install
-1. Blender → Edit → Preferences → Add-ons.
-2. Choose **Install from Disk**.
-3. Select `meshy_blender_importer_v1.1.0.zip`.
-4. Enable **Meshy .meshy Importer**.
+
+### Blender 4.2+
+Use the included **`Meshy Importer for Blender & Unity - Blender.zip`** with:
+
+**Edit → Preferences → Get Extensions → ⋯ → Install from Disk**
+
+Then enable **Meshy Importer for Blender & Unity**.
+
+The package includes a `blender_manifest.toml`, so it can be installed through Blender's modern Extensions workflow. Blender's extension format supports updating by installing a newer package over the existing extension.
+
+### Older Blender versions
+The add-on code retains `bl_info` for legacy installation. Use Blender's normal **Install from Disk / Install Add-on** workflow with the same ZIP.
 
 ## Use
-File → Import → Meshy Model (.meshy), then select your `.meshy` file.
 
-## What was fixed in v1.1.0
-The previous build accidentally omitted the leading `JSON` from the fixed 32-byte AES key. That caused the internal AES key expansion to throw:
+**File → Import → Meshy Model (.meshy)**
 
-`list index out of range`
+Select a `.meshy` file. The add-on decrypts it locally, creates a temporary GLB, imports it with Blender's native glTF importer, then removes the temporary file.
 
-The key is now the full literal documented by the reverse-engineered format:
+## Compatibility
 
-`JSON{"accessors":[{"bufferView":`
+- Blender 4.2+.
+- Blender 5.2+ is recommended for Meshy files that use `EXT_meshopt_compression`.
 
-The reconstructed GLB's total-length field is also corrected before Blender imports it.
+## Security / privacy
+
+The decoder runs locally. The `.meshy` model is not uploaded by this add-on.
 
 ## Format
+
 The current reverse-engineered format describes:
 - `MESHY.AI` magic at bytes 0–7
 - 12-byte nonce at bytes 10–21
 - 8192-byte AES-CTR encrypted prefix
-- 16-byte authentication tag
+- 16-byte authentication/tag area
 - plaintext remainder
 - `EXT_meshopt_compression` in the resulting GLB
 
-Reference implementation:
-https://github.com/Amal-David/meshy2glb
+The fixed AES-256 key used by the current format is the literal 32-byte prefix documented by the reverse-engineered implementation.
 
-Everything is processed locally by the add-on; the model is not uploaded.
+## Support
 
+Created by FISHHWB.
 
-## Support & Disclaimer
-
-Official FISHHWB support/community Discord: https://discord.gg/vCcsnX4HQP
-
-**Important:** FISHHWB is responsible only for the original, unmodified release. Any modifications, patches, forks, replacements, or other changes made by anyone other than FISHHWB are the responsibility of the person making those changes. FISHHWB is not responsible for bugs, errors, crashes, compatibility problems, data loss, or other issues caused by third-party changes. Please use the official unmodified release when requesting support. See the repository `DISCLAIMER.md` for the full notice.
+Repository:
+https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity

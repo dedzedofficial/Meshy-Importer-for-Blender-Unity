@@ -1,11 +1,25 @@
 # Changelog
 
 ## 1.1.0
-- Fixed the AES key expansion crash (`list index out of range`) caused by an incorrect 32-byte key.
-- Fixed Unity Package Manager dependency validation: UnityGLTF is no longer declared as an invalid in-package Git URL dependency. It's installed via **Tools → Meshy → Install UnityGLTF 2.21.0**, which adds it to the project's `Packages/manifest.json` directly.
-- Added FISHHWB Discord support link.
-- Added modification/support disclaimer.
-- Corrected the root README's Unity install instructions to match the actual (manual) UnityGLTF install step.
-- Fixed the Unity "About FISHHWB Meshy Importer" dialog printing literal `\n` characters instead of line breaks.
-- Removed a dead, unused, and actually-broken key-expansion helper left over in the Blender add-on (it was never called, and would have raised a `TypeError` if it had been).
-- Clarified `unity/Runtime/MeshyDecoder.cs`: it now fails immediately with a clear message pointing to the Editor converter, instead of reading and parsing the whole file before throwing from a non-functional stub.
+
+### Unity workflow
+- Added a native Unity Scripted Importer registration for `.meshy`, so the file appears as a first-class custom asset in the Project window.
+- Kept automatic GLB reconstruction as the compatibility bridge for UnityGLTF.
+- Added a custom `.meshy` Inspector with status, file size, Reimport, Open Folder, and Validate controls.
+- Added automatic reimport when `.meshy` files are added, replaced, or moved.
+- Added cleanup of generated GLB companions when the source `.meshy` is deleted or moved.
+- Added first-run setup guidance.
+- Added Validate Installation, Validate All, Reimport Selected, Show Welcome Again, and Patreon support actions.
+- Kept manual conversion tools as a fallback.
+
+### Blender workflow
+- Kept the Blender ZIP bundled inside the main distribution.
+- Updated the bundled Blender documentation for legacy 3.6–4.1 and modern 4.2+ Extension workflows.
+- Added Blender Help-menu links for documentation and Patreon support.
+
+### Documentation / discoverability
+- Added `GETTING_A_MESHY_FILE.md` with the Chrome DevTools Network workflow.
+- Added `TROUBLESHOOTING.md`.
+- Expanded `SEO_KEYWORDS.md` and Unity package keywords.
+- Added clearer compatibility and dependency guidance.
+- Kept version **1.1.0**.

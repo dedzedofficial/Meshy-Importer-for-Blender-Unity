@@ -4,35 +4,81 @@ using System.Text;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 
 namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
+        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.1.0";
+
+        [InitializeOnLoadMethod]
+        private static void FirstRun()
+        {
+            if (EditorPrefs.GetBool(FirstRunKey, false)) return;
+            EditorApplication.delayCall += ShowFirstRun;
+        }
+
+        private static void ShowFirstRun()
+        {
+            if (EditorPrefs.GetBool(FirstRunKey, false)) return;
+            EditorPrefs.SetBool(FirstRunKey, true);
+            int choice = EditorUtility.DisplayDialogComplex(
+                "Meshy Importer for Blender & Unity",
+                "Installed successfully. Drop a real .meshy file anywhere under Assets and it will be reconstructed locally for UnityGLTF.\n\n" +
+                "Recommended: install the compatible UnityGLTF dependency from Tools > Meshy.",
+                "Setup UnityGLTF", "Later", "Documentation");
+            if (choice == 0) InstallUnityGLTF();
+            else if (choice == 2) Application.OpenURL(RepositoryUrl);
+        }
+
         private const string RepositoryUrl =
             "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity";
 
-        [MenuItem("Tools/Meshy/About FISHHWB Meshy Importer")]
+        [MenuItem("Tools/Meshy/Show Welcome Again")]
+        public static void ShowWelcomeAgain()
+        {
+            EditorPrefs.DeleteKey(FirstRunKey);
+            ShowFirstRun();
+        }
+
+        [MenuItem("Tools/Meshy/About Meshy Importer for Blender & Unity")]
         public static void About()
         {
             EditorUtility.DisplayDialog(
-                "FISHHWB Meshy Importer",
+                "Meshy Importer for Blender & Unity",
                 "Created by FISHHWB\n\n" +
                 "Meshy .meshy -> GLB importer for Unity.\n" +
                 "UnityGLTF is installed separately at the project level.\n" +
-                "Use Tools > Meshy > Install UnityGLTF 2.21.0 before importing models.\n\n" +
-                RepositoryUrl,
+                "Use Tools > Meshy > Install UnityGLTF (Compatible Version) before importing models.\n\n" +
+                RepositoryUrl + "\n\nSupport the project:\n" + PatreonUrl,
                 "OK");
         }
 
-        private const string UnityGLTFUrl =
-            "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0";
+        private const string PatreonUrl = "https://www.patreon.com/cw/DedZed";
 
-        [MenuItem("Tools/Meshy/Install UnityGLTF 2.21.0")]
+        [MenuItem("Tools/Meshy/Support / Donate on Patreon") ]
+        public static void Donate()
+        {
+            Application.OpenURL(PatreonUrl);
+        }
+
+        private const string UnityGLTFModernUrl =
+            "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0";
+        private const string UnityGLTFLegacyUrl =
+            "https://github.com/KhronosGroup/UnityGLTF.git#release/2.9.1-rc";
+
+        [MenuItem("Tools/Meshy/Install UnityGLTF (Compatible Version)")]
         public static void InstallUnityGLTF()
         {
-            var request = Client.Add(UnityGLTFUrl);
+            string unityVersion = Application.unityVersion;
+            string versionPrefix = unityVersion.Length >= 6 ? unityVersion.Substring(0, 6) : unityVersion;
+            bool legacy2020 = versionPrefix.StartsWith("2020.3", StringComparison.Ordinal);
+            string selectedVersion = legacy2020 ? "2.9.1-rc" : "2.21.0";
+            string selectedUrl = legacy2020 ? UnityGLTFLegacyUrl : UnityGLTFModernUrl;
+
+            var request = Client.Add(selectedUrl);
             void CheckRequest()
             {
                 if (!request.IsCompleted)
@@ -44,8 +90,8 @@ namespace FISHHWB.MeshyImporter.Editor
                 {
                     EditorUtility.DisplayDialog(
                         "UnityGLTF Installed",
-                        "UnityGLTF 2.21.0 has been added to this project.\n\n" +
-                        "You can now convert .meshy files and import the resulting GLB models.",
+                        "UnityGLTF " + selectedVersion + " has been added to this project.\n\n" +
+                        "You can now drop .meshy files into Assets and import the resulting model.",
                         "OK");
                 }
                 else
@@ -59,6 +105,88 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorApplication.update += CheckRequest;
         }
 
+        [MenuItem("Tools/Meshy/Validate Installation")]
+        public static void ValidateInstallation()
+        {
+            string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
+            bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
+            string message = "Meshy Importer 1.1.0: OK\n" +
+                "Unity: " + Application.unityVersion + "\n" +
+                "UnityGLTF: " + (packagePresent ? "detected in Packages/manifest.json" : "NOT detected") + "\n" +
+                ".meshy Asset Pipeline: " + (typeof(ScriptedImporter) != null ? "available" : "unavailable") + "\n" +
+                "Decoder: local/editor only\n" +
+                "Patreon: https://www.patreon.com/cw/DedZed";
+            EditorUtility.DisplayDialog("Meshy Importer Diagnostics", message, "OK");
+        }
+
+        [MenuItem("Tools/Meshy/Validate All .meshy In Assets")]
+        public static void ValidateAll()
+        {
+            string[] files = Directory.GetFiles(Application.dataPath, "*.meshy", SearchOption.AllDirectories);
+            if (files.Length == 0)
+            {
+                EditorUtility.DisplayDialog("Meshy Validation", "No .meshy files were found inside Assets.", "OK");
+                return;
+            }
+            int valid = 0;
+            foreach (string file in files)
+            {
+                string assetPath = "Assets" + file.Substring(Application.dataPath.Length).Replace('\\', '/');
+                if (ValidateOne(assetPath, false)) valid++;
+            }
+            EditorUtility.DisplayDialog("Meshy Validation", $"Valid: {valid}\nInvalid: {files.Length - valid}\nTotal: {files.Length}", "OK");
+        }
+
+        public static void ValidateOne(string assetPath)
+        {
+            ValidateOne(assetPath, true);
+        }
+
+        private static bool ValidateOne(string assetPath, bool showDialog)
+        {
+            try
+            {
+                DecodeFileForEditor(assetPath);
+                if (showDialog) EditorUtility.DisplayDialog("Meshy Validation", "Valid .meshy payload. The decoder produced a valid GLB.", "OK");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (showDialog) EditorUtility.DisplayDialog("Meshy Validation Failed", ex.Message, "OK");
+                return false;
+            }
+        }
+
+        [MenuItem("Tools/Meshy/Reimport Selected .meshy")]
+        public static void ReimportSelected()
+        {
+            string path = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
+            if (string.IsNullOrEmpty(path) || !path.EndsWith(".meshy", StringComparison.OrdinalIgnoreCase))
+            {
+                EditorUtility.DisplayDialog("Meshy Importer", "Select a .meshy asset in the Project window first.", "OK");
+                return;
+            }
+            ReimportAsset(path);
+        }
+
+        public static void ReimportAsset(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath) || !assetPath.EndsWith(".meshy", StringComparison.OrdinalIgnoreCase)) return;
+            try
+            {
+                string full = ProjectPath(assetPath);
+                File.WriteAllBytes(Path.ChangeExtension(full, ".glb"), DecodeFileForEditor(assetPath));
+                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
+                Debug.Log("Meshy Importer: reimported " + assetPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Meshy Importer: reimport failed for " + assetPath + "\n" + ex);
+                EditorUtility.DisplayDialog("Meshy Reimport Failed", ex.Message, "OK");
+            }
+        }
+
         [MenuItem("Tools/Meshy/Convert .meshy to GLB...")]
         public static void ConvertOne()
         {
@@ -69,7 +197,7 @@ namespace FISHHWB.MeshyImporter.Editor
             try
             {
                 string output = Path.ChangeExtension(path, ".glb");
-                byte[] glb = Decode(path);
+                byte[] glb = DecodeFileForEditor(path);
                 File.WriteAllBytes(output, glb);
                 AssetDatabase.Refresh();
                 Debug.Log($"Meshy import complete: {output}");
@@ -104,7 +232,7 @@ namespace FISHHWB.MeshyImporter.Editor
             {
                 try
                 {
-                    File.WriteAllBytes(Path.ChangeExtension(file, ".glb"), Decode(file));
+                    File.WriteAllBytes(Path.ChangeExtension(file, ".glb"), DecodeFileForEditor(file));
                     converted++;
                 }
                 catch (Exception ex)
@@ -119,9 +247,16 @@ namespace FISHHWB.MeshyImporter.Editor
                 "OK");
         }
 
-        private static byte[] Decode(string path)
+        private static string ProjectPath(string assetPath)
         {
-            byte[] data = File.ReadAllBytes(path);
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            return Path.Combine(projectRoot, assetPath.Replace('\\', Path.DirectorySeparatorChar));
+        }
+
+        public static byte[] DecodeFileForEditor(string path)
+        {
+            string fullPath = path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ? ProjectPath(path) : path;
+            byte[] data = File.ReadAllBytes(fullPath);
             if (data.Length < 32 + 8192 + 16)
                 throw new InvalidDataException("The .meshy file is too small.");
 
