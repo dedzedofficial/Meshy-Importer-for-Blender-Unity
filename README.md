@@ -1,6 +1,6 @@
 # Meshy Importer for Blender & Unity
 
-**Version 1.1.0 — created and maintained by FISHHWB**
+**Version 1.1.1 — created and maintained by FISHHWB**
 
 Import real Meshy `.meshy` model payloads into **Unity and Blender** with a local decoder. Unity users can drop `.meshy` files into `Assets` and let the Unity Asset Pipeline handle the source file automatically; Blender users can use **File > Import > Meshy Model (.meshy)**.
 

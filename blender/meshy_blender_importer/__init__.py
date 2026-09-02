@@ -1,8 +1,8 @@
 bl_info = {
     "name": "Meshy Importer for Blender & Unity",
     "author": "FISHHWB",
-    "version": (1, 1, 0),
-    "blender": (5, 2, 0),
+    "version": (1, 1, 1),
+    "blender": (3, 6, 0),
     "location": "File > Import > Meshy Model (.meshy)",
     "description": "Imports Meshy .meshy containers locally through Blender's native GLB importer.",
     "category": "Import-Export",
@@ -192,15 +192,39 @@ def menu_func_import(self, context):
     self.layout.operator(IMPORT_OT_meshy.bl_idname, text="Meshy Model (.meshy)")
 
 
-classes = (IMPORT_OT_meshy,)
+def menu_func_help(self, context):
+    self.layout.separator()
+    self.layout.operator("wm.meshy_support", text="Meshy Importer Support / Patreon")
+    self.layout.operator("wm.meshy_docs", text="Meshy Importer Documentation")
+
+
+class WM_OT_meshy_support(bpy.types.Operator):
+    bl_idname = "wm.meshy_support"
+    bl_label = "Meshy Importer Support"
+    def execute(self, context):
+        bpy.ops.wm.url_open(url="https://www.patreon.com/cw/DedZed")
+        return {'FINISHED'}
+
+
+class WM_OT_meshy_docs(bpy.types.Operator):
+    bl_idname = "wm.meshy_docs"
+    bl_label = "Meshy Importer Documentation"
+    def execute(self, context):
+        bpy.ops.wm.url_open(url="https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity")
+        return {'FINISHED'}
+
+
+classes = (IMPORT_OT_meshy, WM_OT_meshy_support, WM_OT_meshy_docs)
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
+    bpy.types.TOPBAR_MT_help.append(menu_func_help)
 
 def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+    bpy.types.TOPBAR_MT_help.remove(menu_func_help)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 

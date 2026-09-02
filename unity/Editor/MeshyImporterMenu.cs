@@ -11,7 +11,7 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.1.0";
+        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.1.1";
 
         [InitializeOnLoadMethod]
         private static void FirstRun()
@@ -110,7 +110,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.1.0: OK\n" +
+            string message = "Meshy Importer 1.1.1: OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "UnityGLTF: " + (packagePresent ? "detected in Packages/manifest.json" : "NOT detected") + "\n" +
                 ".meshy Asset Pipeline: " + (typeof(ScriptedImporter) != null ? "available" : "unavailable") + "\n" +
