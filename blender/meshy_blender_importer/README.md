@@ -1,6 +1,6 @@
 # Meshy Importer for Blender & Unity — Blender
 
-**Version 1.1.1**
+**Version 1.2.0**
 
 This Blender extension adds:
 

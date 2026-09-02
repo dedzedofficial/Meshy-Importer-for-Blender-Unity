@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "meshy_importer_for_blender_unity"
-version = "1.1.1"
+version = "1.2.0"
 name = "Meshy Importer for Blender & Unity"
 tagline = "Import Meshy .meshy model files directly into Blender"
 maintainer = "FISHHWB"

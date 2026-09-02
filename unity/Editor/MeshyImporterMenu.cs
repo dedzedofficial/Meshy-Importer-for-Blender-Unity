@@ -11,7 +11,7 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.1.1";
+        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.2.0";
 
         [InitializeOnLoadMethod]
         private static void FirstRun()
@@ -26,11 +26,10 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorPrefs.SetBool(FirstRunKey, true);
             int choice = EditorUtility.DisplayDialogComplex(
                 "Meshy Importer for Blender & Unity",
-                "Installed successfully. Drop a real .meshy file anywhere under Assets and it will be reconstructed locally for UnityGLTF.\n\n" +
-                "Recommended: install the compatible UnityGLTF dependency from Tools > Meshy.",
-                "Setup UnityGLTF", "Later", "Documentation");
-            if (choice == 0) InstallUnityGLTF();
-            else if (choice == 2) Application.OpenURL(RepositoryUrl);
+                "Installed successfully. Drop a real .meshy file anywhere under Assets and it will be reconstructed into a working model natively, with no other packages required.\n\n" +
+                "UnityGLTF is only used as an automatic fallback for the rare payload that uses a glTF extension the native importer does not implement yet.",
+                "Got it", "Documentation", "");
+            if (choice == 1) Application.OpenURL(RepositoryUrl);
         }
 
         private const string RepositoryUrl =
@@ -49,9 +48,10 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorUtility.DisplayDialog(
                 "Meshy Importer for Blender & Unity",
                 "Created by FISHHWB\n\n" +
-                "Meshy .meshy -> GLB importer for Unity.\n" +
-                "UnityGLTF is installed separately at the project level.\n" +
-                "Use Tools > Meshy > Install UnityGLTF (Compatible Version) before importing models.\n\n" +
+                "Meshy .meshy importer for Unity. Builds meshes, materials, textures, and\n" +
+                "skinning directly -- no UnityGLTF or glTFast dependency for the normal path.\n" +
+                "UnityGLTF is only installed automatically as a fallback for the rare file\n" +
+                "using a glTF extension the native importer does not implement yet.\n\n" +
                 RepositoryUrl + "\n\nSupport the project:\n" + PatreonUrl,
                 "OK");
         }
@@ -69,7 +69,7 @@ namespace FISHHWB.MeshyImporter.Editor
         private const string UnityGLTFLegacyUrl =
             "https://github.com/KhronosGroup/UnityGLTF.git#release/2.9.1-rc";
 
-        [MenuItem("Tools/Meshy/Install UnityGLTF (Compatible Version)")]
+        [MenuItem("Tools/Meshy/Install UnityGLTF (Optional Fallback)")]
         public static void InstallUnityGLTF()
         {
             string unityVersion = Application.unityVersion;
@@ -91,7 +91,7 @@ namespace FISHHWB.MeshyImporter.Editor
                     EditorUtility.DisplayDialog(
                         "UnityGLTF Installed",
                         "UnityGLTF " + selectedVersion + " has been added to this project.\n\n" +
-                        "You can now drop .meshy files into Assets and import the resulting model.",
+                        "The native importer still handles ordinary .meshy files on its own -- this is only used as a fallback for files needing an unsupported glTF extension.",
                         "OK");
                 }
                 else
@@ -110,9 +110,10 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.1.1: OK\n" +
+            string message = "Meshy Importer 1.2.0: OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
-                "UnityGLTF: " + (packagePresent ? "detected in Packages/manifest.json" : "NOT detected") + "\n" +
+                "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
+                "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +
                 ".meshy Asset Pipeline: " + (typeof(ScriptedImporter) != null ? "available" : "unavailable") + "\n" +
                 "Decoder: local/editor only\n" +
                 "Patreon: https://www.patreon.com/cw/DedZed";
@@ -174,8 +175,8 @@ namespace FISHHWB.MeshyImporter.Editor
             if (string.IsNullOrEmpty(assetPath) || !assetPath.EndsWith(".meshy", StringComparison.OrdinalIgnoreCase)) return;
             try
             {
-                string full = ProjectPath(assetPath);
-                File.WriteAllBytes(Path.ChangeExtension(full, ".glb"), DecodeFileForEditor(assetPath));
+                // OnImportAsset (MeshyScriptedImporter) does the full decode/build/fallback
+                // itself now, so reimporting the .meshy asset directly is all that's needed.
                 AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
                 AssetDatabase.Refresh();
                 Debug.Log("Meshy Importer: reimported " + assetPath);

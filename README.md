@@ -1,6 +1,6 @@
 # Meshy Importer for Blender & Unity
 
-**Version 1.1.1 — created and maintained by FISHHWB**
+**Version 1.2.0 — created and maintained by FISHHWB**
 
 Import real Meshy `.meshy` model payloads into **Unity and Blender** with a local decoder. Unity users can drop `.meshy` files into `Assets` and let the Unity Asset Pipeline handle the source file automatically; Blender users can use **File > Import > Meshy Model (.meshy)**.
 
@@ -9,27 +9,26 @@ Import real Meshy `.meshy` model payloads into **Unity and Blender** with a loca
 ## ⭐ Unity: drop in `.meshy` and go
 
 1. Install this package with Unity Package Manager.
-2. Open **Tools > Meshy > Install UnityGLTF (Compatible Version)** once.
-3. Drop a real `.meshy` file anywhere under `Assets/`.
-4. Unity registers `.meshy` as a custom Asset Pipeline type, validates the source, and reconstructs a local GLB companion for UnityGLTF.
-5. Select the `.meshy` asset to see status, size, **Reimport**, and **Validate** controls in the Inspector.
+2. Drop a real `.meshy` file anywhere under `Assets/`.
+3. Unity registers `.meshy` as a custom Asset Pipeline type and builds the mesh, materials, textures, and skinning **directly -- no UnityGLTF or glTFast package required.**
+4. Select the `.meshy` asset to see status, size, **Reimport**, and **Validate** controls in the Inspector.
 
 Unity's Scripted Importer system is specifically intended for custom file extensions and automatically invokes the importer when supported files are added or changed.
 
 ### Unity menu
 
-- **Tools > Meshy > Install UnityGLTF (Compatible Version)**
 - **Tools > Meshy > Validate Installation**
 - **Tools > Meshy > Validate All .meshy In Assets**
 - **Tools > Meshy > Reimport Selected .meshy**
 - **Tools > Meshy > Convert .meshy to GLB...**
 - **Tools > Meshy > Convert All .meshy In Assets**
+- **Tools > Meshy > Install UnityGLTF (Optional Fallback)**
 - **Tools > Meshy > Support / Donate on Patreon**
 - **Tools > Meshy > Show Welcome Again**
 
 ### Unity dependency
 
-UnityGLTF is the GLB bridge/importer. Its current package ID is `org.khronos.unitygltf`; UnityGLTF currently recommends Unity 2021.3+, 2022.3+, and Unity 6, while its README notes that Unity 2020.3 should use an older UnityGLTF release such as 2.9.1-rc.
+None, for the normal path -- the importer builds meshes, PBR materials/textures, and skinning natively. UnityGLTF is only installed automatically as a fallback when a specific payload uses a glTF extension the native builder doesn't implement yet (currently just `EXT_meshopt_compression`); its package ID is `org.khronos.unitygltf`.
 
 ## 🧩 How to get a `.meshy` file
 

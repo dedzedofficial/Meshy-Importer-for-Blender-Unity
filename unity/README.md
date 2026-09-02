@@ -1,17 +1,15 @@
-# Meshy Importer for Unity — v1.1.1
+# Meshy Importer for Unity — v1.2.0
 
 ## What it does
 
-Drop a real Meshy `.meshy` payload into your Unity project's `Assets` folder. The package automatically detects it, decodes it locally, writes the GLB companion, and lets UnityGLTF import the model.
+Drop a real Meshy `.meshy` payload into your Unity project's `Assets` folder. The package automatically detects it, decodes it locally, and builds the mesh, materials, textures, and skinning directly -- **no UnityGLTF or glTFast required**. Nothing is written to disk as a `.glb`; everything imports as sub-assets of the `.meshy` file itself, the same way Unity's built-in FBX importer works.
 
 ### One-time setup
 
 1. Install this package from Unity Package Manager.
-2. Choose **Tools → Meshy → Install UnityGLTF (Compatible Version)**. The importer selects UnityGLTF 2.9.1-rc on Unity 2020.3 and 2.21.0 on Unity 2021.3+.
-3. Wait for Unity Package Manager to finish.
-4. Drop `model.meshy` into `Assets/`.
+2. Drop `model.meshy` into `Assets/`. That's it.
 
-After that, normal `.meshy` files can be added by drag-and-drop. The generated `.glb` is the bridge asset used by UnityGLTF.
+Meshy's real-world exports use `EXT_meshopt_compression` for geometry and `EXT_texture_webp` for textures -- both are decoded natively (from-scratch decoders verified byte-exact against the reference implementations), so this covers real `.meshy` files end-to-end. If a payload ever uses some other glTF extension the native builder doesn't implement, the importer automatically falls back to writing a `.glb` companion and importing it with whatever glTF package is installed -- run **Tools → Meshy → Install UnityGLTF (Optional Fallback)** only if you hit that case.
 
 ## Getting the `.meshy` payload
 
@@ -21,9 +19,9 @@ Do not rename a GLB/FBX/OBJ/HTML/JSON response to `.meshy`. A valid payload begi
 
 ## Manual tools
 
-- **Tools → Meshy → Convert `.meshy` to GLB...**
+- **Tools → Meshy → Convert `.meshy` to GLB...** -- export a standalone `.glb` for use outside this importer (e.g. another engine).
 - **Tools → Meshy → Convert All `.meshy` In Assets**
-- **Tools → Meshy → Install UnityGLTF (Compatible Version)**
+- **Tools → Meshy → Install UnityGLTF (Optional Fallback)** -- only needed if a payload uses a glTF extension outside the native builder's coverage (meshopt geometry and WebP textures are both handled natively).
 - **Tools → Meshy → Support / Donate on Patreon**
 
 ## Support
