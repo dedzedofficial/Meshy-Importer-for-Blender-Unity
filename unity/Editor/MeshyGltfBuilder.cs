@@ -22,7 +22,7 @@ namespace FISHHWB.MeshyImporter.Editor
         private static readonly HashSet<string> SupportedExtensions = new HashSet<string>
         {
             "KHR_materials_emissive_strength",
-            "KHR_texture_transform", // detected but not applied; harmless to ignore for a first pass
+            "KHR_texture_transform", // applied to UV0/UV1 at mesh-build time (see GetPrimaryUvTransform)
             // Meshy's exports commonly quantize POSITION/NORMAL/TANGENT/TEXCOORD_n to smaller
             // integer component types to shrink file size. The extension itself only relaxes
             // the spec's "must be FLOAT" restriction -- it adds no new data or transform of its
@@ -613,10 +613,23 @@ namespace FISHHWB.MeshyImporter.Editor
                     mesh.tangents = tangents;
                 }
 
+                // KHR_texture_transform: Meshy (like many glTF exporters) packs a mesh's UVs
+                // into a small sub-rectangle of [0,1] (one cell of an atlas) and relies on a
+                // per-texture-reference offset/scale/rotation to remap them back out across the
+                // full texture at render time. A standard glTF importer (glTFast/UnityGLTF)
+                // applies that remap to the UV set it targets; skipping it -- as this importer
+                // previously did -- leaves the raw, tiny, un-remapped UVs in place, which samples
+                // only a small corner of the texture and looks flat/wrong compared to a correct
+                // import. Meshy puts the same transform on baseColor/metallicRoughness/normal, so
+                // resolving one primary transform from the material and applying it to whichever
+                // UV set it targets is sufficient here.
+                int materialIndexForUv = MeshyMiniJson.Has(prim, "material") ? MeshyMiniJson.GetInt(prim, "material", -1) : -1;
+                var uvTransform = GetPrimaryUvTransform(ctx, materialIndexForUv, out int uvTransformTexCoord);
+
                 if (MeshyMiniJson.Has(attrs, "TEXCOORD_0"))
-                    mesh.uv = ToUv(ReadAccessorFloats(ctx, MeshyMiniJson.GetInt(attrs, "TEXCOORD_0")));
+                    mesh.uv = ToUv(ReadAccessorFloats(ctx, MeshyMiniJson.GetInt(attrs, "TEXCOORD_0")), uvTransform, uvTransformTexCoord == 0);
                 if (MeshyMiniJson.Has(attrs, "TEXCOORD_1"))
-                    mesh.uv2 = ToUv(ReadAccessorFloats(ctx, MeshyMiniJson.GetInt(attrs, "TEXCOORD_1")));
+                    mesh.uv2 = ToUv(ReadAccessorFloats(ctx, MeshyMiniJson.GetInt(attrs, "TEXCOORD_1")), uvTransform, uvTransformTexCoord == 1);
 
                 if (MeshyMiniJson.Has(attrs, "COLOR_0"))
                 {
@@ -723,10 +736,72 @@ namespace FISHHWB.MeshyImporter.Editor
             return flip * src * flip;
         }
 
-        private static Vector2[] ToUv(float[][] raw)
+        private struct UvTransform
+        {
+            public Vector2 Offset;
+            public Vector2 Scale;
+            public float Rotation; // radians
+        }
+
+        // Resolves the KHR_texture_transform to apply to a mesh's UVs, sourced from whichever
+        // texture reference on the primitive's material defines one first (baseColor is checked
+        // first since it dominates a model's appearance; the rest are fallbacks for materials
+        // that only put the extension on, say, the normal map). Returns null when the material
+        // has no textures using the extension, so meshes without it are left untouched.
+        private static UvTransform? GetPrimaryUvTransform(Ctx ctx, int materialIndex, out int texCoord)
+        {
+            texCoord = 0;
+            if (materialIndex < 0 || ctx.Materials == null || materialIndex >= ctx.Materials.Count) return null;
+            var m = MeshyMiniJson.AsObject(ctx.Materials[materialIndex]);
+            var pbr = MeshyMiniJson.Get(m, "pbrMetallicRoughness");
+
+            Dictionary<string, object>[] candidates =
+            {
+                pbr != null ? MeshyMiniJson.Get(pbr, "baseColorTexture") : null,
+                pbr != null ? MeshyMiniJson.Get(pbr, "metallicRoughnessTexture") : null,
+                MeshyMiniJson.Get(m, "normalTexture"),
+                MeshyMiniJson.Get(m, "emissiveTexture"),
+                MeshyMiniJson.Get(m, "occlusionTexture"),
+            };
+
+            foreach (var texRef in candidates)
+            {
+                if (texRef == null) continue;
+                var ext = MeshyMiniJson.Get(MeshyMiniJson.Get(texRef, "extensions"), "KHR_texture_transform");
+                if (ext == null) continue;
+
+                var offsetArr = MeshyMiniJson.GetArray(ext, "offset");
+                var scaleArr = MeshyMiniJson.GetArray(ext, "scale");
+                var t = new UvTransform
+                {
+                    Offset = offsetArr != null ? new Vector2((float)MeshyMiniJson.AsNumber(offsetArr[0]), (float)MeshyMiniJson.AsNumber(offsetArr[1])) : Vector2.zero,
+                    Scale = scaleArr != null ? new Vector2((float)MeshyMiniJson.AsNumber(scaleArr[0]), (float)MeshyMiniJson.AsNumber(scaleArr[1])) : Vector2.one,
+                    Rotation = (float)MeshyMiniJson.GetNumber(ext, "rotation", 0),
+                };
+                texCoord = MeshyMiniJson.Has(texRef, "texCoord") ? MeshyMiniJson.GetInt(texRef, "texCoord", 0) : 0;
+                return t;
+            }
+            return null;
+        }
+
+        private static Vector2[] ToUv(float[][] raw, UvTransform? transform, bool applyHere)
         {
             var uv = new Vector2[raw.Length];
-            for (int i = 0; i < raw.Length; i++) uv[i] = new Vector2(raw[i][0], 1f - raw[i][1]); // glTF UV origin is top-left
+            for (int i = 0; i < raw.Length; i++)
+            {
+                float u = raw[i][0];
+                float v = raw[i][1];
+                if (applyHere && transform.HasValue)
+                {
+                    var t = transform.Value;
+                    float cos = Mathf.Cos(t.Rotation);
+                    float sin = Mathf.Sin(t.Rotation);
+                    float u2 = u * t.Scale.x * cos - v * t.Scale.y * sin + t.Offset.x;
+                    float v2 = u * t.Scale.x * sin + v * t.Scale.y * cos + t.Offset.y;
+                    u = u2; v = v2;
+                }
+                uv[i] = new Vector2(u, 1f - v); // glTF UV origin is top-left
+            }
             return uv;
         }
 

@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.3.4
+
+### Unity: fixed the texture looking nothing like the correct Blender import -- KHR_texture_transform was detected but never applied
+- After the black-rendering and orange-emission bugs were fixed, the model in Unity was
+  still visibly wrong compared to the same file imported in Blender: Blender showed a
+  richly detailed textured surface, Unity showed a flat, plain-colored blob with none of
+  the pattern detail.
+- Root cause: Meshy's exported materials carry a `KHR_texture_transform` extension on
+  their base color / metallic-roughness / normal texture references (offset + scale, no
+  rotation in this file). This extension is Meshy's compensation for quantizing
+  `TEXCOORD_0` to a normalized `UNSIGNED_SHORT`: the raw stored UVs only span a tiny
+  corner of [0,1] (about a 1/16 x 1/16 patch), and the transform's ~16x scale is what maps
+  them back out across the full texture at render time -- exactly like the node
+  translation/scale used for quantized `POSITION` data (see 1.3.3), but for UVs instead of
+  vertices. `MeshyGltfBuilder.cs` already listed `KHR_texture_transform` as a supported
+  extension, but the comment next to it said "detected but not applied; harmless to ignore
+  for a first pass" -- that assumption was wrong: without applying it, every triangle
+  sampled from the same tiny corner of the base color texture, which is what produced the
+  flat, mostly-uniform color instead of the actual pattern.
+- Fixed by resolving the transform (offset/scale/rotation) from whichever of the
+  material's texture references defines it first -- baseColorTexture, then
+  metallicRoughnessTexture, normalTexture, emissiveTexture, occlusionTexture, in that
+  order, since Meshy puts an identical transform on all of them -- and applying it to the
+  raw glTF-space UV before the existing top-left-to-bottom-left V flip, matching how a
+  standard glTF importer (glTFast/UnityGLTF) samples the texture. `TEXCOORD_1` is handled
+  the same way when a texture reference targets it via `texCoord: 1`.
+- Verified against the raw glTF data extracted from the `.meshy` container: the accessor's
+  raw (quantized, meshopt-compressed) `TEXCOORD_0` decodes to U/V both confined to
+  `[0, 0.0625]`, and applying the material's `KHR_texture_transform` (scale ~15.99, offset
+  ~0.00003/0.000166) maps that up to `U:[0,0.999] V:[0.0002,0.9998]` -- matching the
+  reimported mesh's actual `mesh.uv` exactly. Re-imported the model in the Editor and
+  confirmed visually on the same placed scene object used for the 1.3.3 verification: it
+  now shows the same varied teal/white/gold pattern as the Blender reference instead of a
+  flat blob.
+
 ## 1.3.3
 
 ### Unity: fixed the actual cause of models rendering black -- a floating-point precision bug, not lighting
