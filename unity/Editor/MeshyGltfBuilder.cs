@@ -530,6 +530,33 @@ namespace FISHHWB.MeshyImporter.Editor
                 }
             }
 
+            // Meshy exports commonly pair KHR_mesh_quantization with a per-node "dequantization"
+            // scale -- e.g. a scale around 1e-4/1e-5 that converts a mesh authored in large
+            // integer-ish local coordinates (thousands of units) back down to real-world size.
+            // Left as a literal Unity Transform.localScale, that combination (huge local vertex
+            // magnitudes x a near-zero scale) is numerically pathological for Unity's realtime
+            // lighting: the object's silhouette, UVs and renderer.bounds all come out correct
+            // (position math tolerates it fine), but the world-space *normal* the lighting
+            // pipeline computes collapses to black regardless of any light in the scene --
+            // confirmed by reproducing it with a plain built-in primitive mesh on the same
+            // transform, and by it disappearing the moment the scale is nudged up to 1e-4.
+            // The fix is to never let that literal a scale reach a live Transform: bake this
+            // node's own local TRS directly into the vertex/normal/tangent data instead (skinned
+            // meshes are left alone -- their vertices already live in a shared skeleton-relative
+            // space driven by bone transforms, not this node's own TRS), and reset the node's
+            // Transform to identity. Parent transforms above this node are untouched and still
+            // apply normally.
+            bool bakeNodeTransform = skinIndex < 0;
+            Vector3 bakePos = node.transform.localPosition;
+            Quaternion bakeRot = node.transform.localRotation;
+            Vector3 bakeScale = node.transform.localScale;
+            if (bakeNodeTransform)
+            {
+                node.transform.localPosition = Vector3.zero;
+                node.transform.localRotation = Quaternion.identity;
+                node.transform.localScale = Vector3.one;
+            }
+
             for (int p = 0; p < primitives.Count; p++)
             {
                 var prim = MeshyMiniJson.AsObject(primitives[p]);
@@ -545,6 +572,9 @@ namespace FISHHWB.MeshyImporter.Editor
                 var vertices = new Vector3[posRaw.Length];
                 for (int i = 0; i < posRaw.Length; i++)
                     vertices[i] = ConvertPoint(new Vector3(posRaw[i][0], posRaw[i][1], posRaw[i][2]));
+                if (bakeNodeTransform)
+                    for (int i = 0; i < vertices.Length; i++)
+                        vertices[i] = bakePos + bakeRot * Vector3.Scale(bakeScale, vertices[i]);
                 mesh.vertices = vertices;
 
                 if (MeshyMiniJson.Has(attrs, "NORMAL"))
@@ -553,6 +583,15 @@ namespace FISHHWB.MeshyImporter.Editor
                     var normals = new Vector3[nRaw.Length];
                     for (int i = 0; i < nRaw.Length; i++)
                         normals[i] = ConvertVector(new Vector3(nRaw[i][0], nRaw[i][1], nRaw[i][2]));
+                    if (bakeNodeTransform)
+                    {
+                        var invScale = new Vector3(
+                            System.Math.Abs(bakeScale.x) > 1e-12f ? 1f / bakeScale.x : 0f,
+                            System.Math.Abs(bakeScale.y) > 1e-12f ? 1f / bakeScale.y : 0f,
+                            System.Math.Abs(bakeScale.z) > 1e-12f ? 1f / bakeScale.z : 0f);
+                        for (int i = 0; i < normals.Length; i++)
+                            normals[i] = (bakeRot * Vector3.Scale(invScale, normals[i])).normalized;
+                    }
                     mesh.normals = normals;
                 }
 
@@ -562,6 +601,15 @@ namespace FISHHWB.MeshyImporter.Editor
                     var tangents = new Vector4[tRaw.Length];
                     for (int i = 0; i < tRaw.Length; i++)
                         tangents[i] = new Vector4(tRaw[i][0], tRaw[i][1], -tRaw[i][2], -tRaw[i][3]);
+                    if (bakeNodeTransform)
+                    {
+                        float mirror = Mathf.Sign(bakeScale.x * bakeScale.y * bakeScale.z);
+                        for (int i = 0; i < tangents.Length; i++)
+                        {
+                            var dir = (bakeRot * Vector3.Scale(bakeScale, (Vector3)tangents[i])).normalized;
+                            tangents[i] = new Vector4(dir.x, dir.y, dir.z, tangents[i].w * mirror);
+                        }
+                    }
                     mesh.tangents = tangents;
                 }
 
@@ -600,20 +648,28 @@ namespace FISHHWB.MeshyImporter.Editor
                     }
                 }
 
+                // The glTF->Unity Z-negation is itself a mirror, so winding is reversed by
+                // default below. A baked node scale with a negative product (an odd number of
+                // negative axes) mirrors the geometry a second time, which cancels that reversal
+                // back out -- so skip it in that case instead of flipping twice.
+                bool flipWinding = !(bakeNodeTransform && bakeScale.x * bakeScale.y * bakeScale.z < 0f);
+
                 if (MeshyMiniJson.Has(prim, "indices"))
                 {
                     var idx = ReadAccessorInts(ctx, MeshyMiniJson.GetInt(prim, "indices"));
-                    for (int i = 0; i + 2 < idx.Length; i += 3)
-                    {
-                        int tmp = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = tmp; // reverse winding
-                    }
+                    if (flipWinding)
+                        for (int i = 0; i + 2 < idx.Length; i += 3)
+                        {
+                            int tmp = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = tmp; // reverse winding
+                        }
                     mesh.triangles = idx;
                 }
                 else
                 {
                     var idx = new int[vertices.Length];
                     for (int i = 0; i < vertices.Length; i++) idx[i] = i;
-                    for (int i = 0; i + 2 < idx.Length; i += 3) { int tmp = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = tmp; }
+                    if (flipWinding)
+                        for (int i = 0; i + 2 < idx.Length; i += 3) { int tmp = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = tmp; }
                     mesh.triangles = idx;
                 }
 

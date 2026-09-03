@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.3.3
+
+### Unity: fixed the actual cause of models rendering black -- a floating-point precision bug, not lighting
+- After 1.3.2 restored plain PBR (matching glTFast/UnityGLTF), the model still rendered
+  solid black under any light, from any angle, at any brightness -- confirmed with a
+  bright point light placed right next to it, which produced no visible response
+  whatsoever, while the exact same light next to another object in the same scene lit it
+  normally.
+- Root cause found by systematic elimination: Meshy exports pair `KHR_mesh_quantization`
+  with a per-node "dequantization" scale, often around 1e-4 to 1e-5, that converts a mesh
+  authored in large integer-ish local coordinates (thousands of units) back down to
+  real-world size. Left as a literal Unity `Transform.localScale`, that combination --
+  huge local vertex magnitudes times a near-zero scale -- is numerically pathological for
+  Unity's realtime lighting: position math, UVs, and `Renderer.bounds` all come out
+  correct (which is why the geometry and textures looked fine), but the world-space
+  *normal* the lighting pipeline computes collapses to zero, so every light's contribution
+  is zero regardless of brightness or angle. Reproduced this in isolation by putting a
+  plain built-in sphere mesh on the same transform: lit normally at scale 1e-4, went
+  solid black at the real ~6e-5 scale, with nothing else changed.
+- Fixed at the root in `MeshyGltfBuilder.BuildMeshOnNode`: a non-skinned mesh node's own
+  local translation/rotation/scale is now baked directly into the vertex, normal, and
+  tangent data (with correct non-uniform-scale normal transform and winding-flip handling
+  for mirrored scales), and the node's Transform is reset to identity afterward. Parent
+  transforms are untouched. Skinned meshes are left as-is, since their vertices already
+  live in a shared skeleton-relative space driven by bone transforms rather than this
+  node's own TRS.
+- Also cleaned up a separate, unrelated issue found while diagnosing this: a stale,
+  separately-extracted material file could end up referenced by a placed prefab instance
+  instead of the current import output, silently masking any material-side fixes. Not a
+  code bug, but worth knowing about if a placed instance ever seems to ignore a reimport.
+
 ## 1.3.2
 
 ### Unity: reverted the 1.3.1 emission fallback -- it produced wrong colors
