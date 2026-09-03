@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.1
+
+### Unity: models no longer render black in dim/unlit scenes
+- Diagnosed a real user report of imported models appearing solid black. Root cause: a
+  physically-based metallic/roughness material genuinely can render black under a scene
+  with little ambient light and no reflection probes -- confirmed this by showing the
+  same test model correctly textured from a camera angle facing its lit side, and by
+  showing the scene's own pre-existing objects were equally dark under the same camera.
+  The imported texture data itself was already verified byte-correct (1.3.0's WebP work).
+- Since a `.meshy` drag-and-drop importer can't assume the destination scene has proper
+  lighting/reflection probes set up, `GetOrBuildMaterial` now always feeds the base color
+  texture back in as emission (at unit strength) when the glTF material doesn't already
+  define a real emissive channel. This puts a floor under the material's brightness at
+  exactly the base color texture, so the model is never invisible in a dim scene; a
+  properly lit scene still adds direct/specular highlights on top as before.
+
 ## 1.3.0
 
 ### Unity: native WebP textures and meshopt geometry, zero remaining dependencies for real-world exports
