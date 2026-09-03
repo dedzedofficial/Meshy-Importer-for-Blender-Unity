@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.2
+
+### Unity: reverted the 1.3.1 emission fallback -- it produced wrong colors
+- 1.3.1's "feed the base color texture back in as emission" fallback (added so models
+  wouldn't go invisible in dim scenes) had a real bug: stacking the texture on top of
+  itself as emission pushed already-bright channels past 1.0 while a comparatively dark
+  channel didn't, desaturating and hue-shifting the result toward orange -- visibly wrong
+  compared to the actual texture.
+- Reverted to plain PBR material construction with no synthetic emission unless the glTF
+  file defines a real emissive channel, matching exactly what a standard glTF importer
+  (glTFast/UnityGLTF) would produce for the same file. A model that renders dim in a scene
+  with little ambient light and no reflection probes is correct PBR behavior in that
+  scene -- a real glTFast import of the same file would look the same way there, so this
+  importer shouldn't diverge from that just to look brighter.
+
 ## 1.3.1
 
 ### Unity: models no longer render black in dim/unlit scenes

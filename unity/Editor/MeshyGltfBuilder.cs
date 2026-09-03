@@ -703,11 +703,10 @@ namespace FISHHWB.MeshyImporter.Editor
             SetFloat(mat, ctx, "_Smoothness", "_Glossiness", 1f - roughness);
 
             var baseColorTex = pbr != null ? MeshyMiniJson.Get(pbr, "baseColorTexture") : null;
-            Texture2D baseColorTexture = null;
             if (baseColorTex != null)
             {
-                baseColorTexture = GetTexture(ctx, MeshyMiniJson.GetInt(baseColorTex, "index", -1), linear: false);
-                if (baseColorTexture != null) SetTexture(mat, ctx, "_BaseMap", "_MainTex", baseColorTexture);
+                var tex = GetTexture(ctx, MeshyMiniJson.GetInt(baseColorTex, "index", -1), linear: false);
+                if (tex != null) SetTexture(mat, ctx, "_BaseMap", "_MainTex", tex);
             }
 
             var mrTex = pbr != null ? MeshyMiniJson.Get(pbr, "metallicRoughnessTexture") : null;
@@ -758,24 +757,16 @@ namespace FISHHWB.MeshyImporter.Editor
                     if (tex != null) SetTexture(mat, ctx, "_EmissionMap", "_EmissionMap", tex);
                 }
             }
-            else if (baseColorTexture != null)
-            {
-                // Meshy's exports rarely define a real glTF emissive channel, and the
-                // destination scene's lighting is completely out of this importer's
-                // control -- a physically-correct metallic/roughness material can render
-                // solid black under a scene with little ambient light and no reflection
-                // probes, even though the imported texture data itself is fine. To keep
-                // "drop the file in, see the model" working regardless of the receiving
-                // scene's lighting rig, feed the base color texture back in as emission
-                // too, at unit strength. This puts a floor under the material's
-                // brightness at exactly the base color texture -- direct/specular
-                // lighting from a properly lit scene still adds highlights on top, it's
-                // just no longer possible for the model to disappear into a dark scene.
-                mat.EnableKeyword("_EMISSION");
-                mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-                SetColor(mat, ctx, "_EmissionColor", "_EmissionColor", new Color(baseColor.r, baseColor.g, baseColor.b, 1f));
-                SetTexture(mat, ctx, "_EmissionMap", "_EmissionMap", baseColorTexture);
-            }
+            // Deliberately no synthetic "always emit the base color texture" fallback here:
+            // that was tried (see CHANGELOG 1.3.1) and reverted in 1.3.2. Stacking the base
+            // color texture on top of itself as emission pushed already-bright channels
+            // (e.g. the red/green in a warm cream color) past 1.0 while the darker blue
+            // channel didn't, which desaturated/hue-shifted the result toward orange --
+            // visibly wrong compared to the source texture. A standard glTF importer
+            // (glTFast/UnityGLTF) doesn't add emission unless the file defines one, and a
+            // model that looks dim in a scene with little ambient light and no reflection
+            // probes is expected PBR behavior in that case too, not something this
+            // importer should paper over with a lighting hack.
 
             string alphaMode = MeshyMiniJson.GetString(m, "alphaMode", "OPAQUE");
             bool doubleSided = MeshyMiniJson.GetBool(m, "doubleSided", false);

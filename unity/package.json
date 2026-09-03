@@ -1,7 +1,7 @@
 {
   "name": "com.fishhwb.meshy-importer",
   "displayName": "Meshy Importer for Blender & Unity",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "unity": "2020.3",
   "description": "Import Meshy .meshy model files directly into Unity. Drop .meshy files into Assets; the custom Asset Pipeline importer builds the mesh, materials, textures, and skinning natively -- including meshopt-compressed geometry and WebP textures -- with no UnityGLTF or glTFast dependency required.",
   "keywords": [
