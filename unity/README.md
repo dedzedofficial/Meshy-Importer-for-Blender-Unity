@@ -1,4 +1,4 @@
-# Meshy Importer for Unity — v1.2.0
+# Meshy Importer for Unity — v1.3.5
 
 ## What it does
 
@@ -19,6 +19,10 @@ Do not rename a GLB/FBX/OBJ/HTML/JSON response to `.meshy`. A valid payload begi
 
 ## Manual tools
 
+- **Tools → Meshy → Validate Installation** -- checks Unity version, native builder status, and whether the optional UnityGLTF fallback package is present.
+- **Tools → Meshy → Validate All `.meshy` In Assets**
+- **Tools → Meshy → Reimport Selected `.meshy`**
+- **Tools → Meshy → Reimport All `.meshy` In Assets** -- forces every `.meshy` asset in the project to rebuild with the current importer. Use this after updating the package if an already-imported model doesn't reflect a fix (importer updates only affect assets that get reimported after the update).
 - **Tools → Meshy → Convert `.meshy` to GLB...** -- export a standalone `.glb` for use outside this importer (e.g. another engine).
 - **Tools → Meshy → Convert All `.meshy` In Assets**
 - **Tools → Meshy → Install UnityGLTF (Optional Fallback)** -- only needed if a payload uses a glTF extension outside the native builder's coverage (meshopt geometry and WebP textures are both handled natively).
