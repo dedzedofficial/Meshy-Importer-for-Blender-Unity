@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.3.5
+
+### Unity: bumped the ScriptedImporter version -- 1.3.1-1.3.4's fixes never reached already-imported assets
+- A user reported a model still showing the exact 1.3.4 "flat, plain-colored blob"
+  symptom in Unity (correct in Blender) after updating -- on a model that had already
+  been imported once before. Turned out the fix in 1.3.4 was correct, but useless for
+  any `.meshy` file already sitting in a project.
+- Root cause: `MeshyScriptedImporter` is declared `[ScriptedImporter(2, ..., AllowCaching
+  = true)]`. With caching on, Unity only reimports a cached asset when its source file
+  changes or that leading version integer changes -- editing the importer's C# does
+  nothing on its own to a `.meshy` asset a user already imported under an older build of
+  this package. That integer was bumped 1 -> 2 for 1.3.0's native decoders, but never
+  again since, despite 1.3.1 (emission-fallback black-scene fix), 1.3.2 (reverting it),
+  1.3.3 (the real black-render fix), and 1.3.4 (`KHR_texture_transform`) all changing
+  what gets baked into the imported mesh/material. Anyone who imported a model under
+  1.3.0-1.3.3 and then simply updated the package files kept seeing whatever that
+  earlier version had produced -- including the flat-blob UV bug -- until they happened
+  to force a reimport by hand.
+- Fixed by bumping the version to 3, so installing 1.3.5 makes Unity treat every
+  existing `.meshy` asset as out of date and reimport it with the current, correct
+  pipeline automatically. Also added **Tools > Meshy > Reimport All .meshy In Assets**
+  as an explicit one-click way to force this without waiting on an Editor
+  restart/domain reload, and corrected the version string hardcoded into **Validate
+  Installation** (it was still printing "1.2.0").
+- Takeaway for future changes: any fix that touches `MeshyGltfBuilder`, `MeshyDecoder`,
+  `MeshyWebpVp8`, or `MeshyMeshopt` needs this version integer bumped in the same
+  change, or the fix will silently not apply to already-imported assets.
+
 ## 1.3.4
 
 ### Unity: fixed the texture looking nothing like the correct Blender import -- KHR_texture_transform was detected but never applied

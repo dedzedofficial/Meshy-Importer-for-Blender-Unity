@@ -110,7 +110,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.2.0: OK\n" +
+            string message = "Meshy Importer 1.3.5: OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
                 "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +
@@ -168,6 +168,27 @@ namespace FISHHWB.MeshyImporter.Editor
                 return;
             }
             ReimportAsset(path);
+        }
+
+        [MenuItem("Tools/Meshy/Reimport All .meshy In Assets")]
+        public static void ReimportAll()
+        {
+            string[] files = Directory.GetFiles(Application.dataPath, "*.meshy", SearchOption.AllDirectories);
+            if (files.Length == 0)
+            {
+                EditorUtility.DisplayDialog("Meshy Reimport", "No .meshy files were found inside Assets.", "OK");
+                return;
+            }
+            // Covers the case where package code changed (a decode/build fix, e.g. 1.3.5's
+            // KHR_texture_transform fix landing after already-imported assets were cached
+            // under an older importer version) but a full Editor restart hasn't happened
+            // yet to pick up the bumped ScriptedImporter version automatically.
+            foreach (string file in files)
+            {
+                string assetPath = "Assets" + file.Substring(Application.dataPath.Length).Replace('\\', '/');
+                ReimportAsset(assetPath);
+            }
+            EditorUtility.DisplayDialog("Meshy Reimport", $"Reimported {files.Length} .meshy asset(s).", "OK");
         }
 
         public static void ReimportAsset(string assetPath)

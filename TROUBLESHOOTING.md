@@ -15,6 +15,9 @@ The file is probably not the model response. Do not rename GLB, FBX, OBJ, HTML, 
 ### The model imports but materials/textures look off
 The native importer repacks glTF's metallic/roughness texture channels for Unity and targets URP `Lit` or built-in `Standard` depending on your render pipeline. Normal maps are applied as raw tangent-space textures without Unity's "Normal map" import flag (there's no `TextureImporter` for an in-memory sub-asset), so they can look slightly different from an FBX-imported normal map -- this is a known limitation, not a bug in your file.
 
+### Blender shows the correct texture but Unity shows a flat, plain-colored blob
+This is a stale import, not a new bug: `.meshy` assets are cached in Unity, so a model you imported before updating this package can keep showing whatever an older, buggier version of the importer produced -- Blender re-imports fresh from the file every time, so it always shows the current, correct result, which is why the two look different for the same file. Force it to catch up: **Tools > Meshy > Reimport All .meshy In Assets** (or **Reimport Selected .meshy** / right-click the asset > Reimport for just one). 1.3.5+ also does this automatically the first time the Editor reloads after you update, but if you're already on 1.3.5+ and still see it, running Reimport All once more is the fix.
+
 ### Meshy changed its web format
 The `.meshy` container is an undocumented web payload and may change without notice. If the decoder reports an invalid GLB after a Meshy site change, keep the original payload and report the failure with the Unity/Blender version and importer version.
 
