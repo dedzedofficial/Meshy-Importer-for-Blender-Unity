@@ -21,7 +21,7 @@ namespace FISHHWB.MeshyImporter.Editor
     // Unity next to a correctly textured Blender import of the same file -- until
     // they manually forced a reimport. Bumped to 3 so updating to 1.3.5 forces every
     // existing .meshy asset in a project to reimport automatically.
-    [ScriptedImporter(3, new[] { "meshy" }, AllowCaching = true)]
+    [ScriptedImporter(4, new[] { "meshy" }, AllowCaching = true)]
     public sealed class MeshyScriptedImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

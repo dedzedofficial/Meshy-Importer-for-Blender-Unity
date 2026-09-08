@@ -998,6 +998,23 @@ namespace FISHHWB.MeshyImporter.Editor
                    bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P';
         }
 
+        // In-place vertical flip of a tightly-packed RGB24 buffer (row-major, 3 bytes/pixel,
+        // no padding) -- converts between top-down decode order and Unity's bottom-up
+        // texture memory order (see the call site's comment for why this matters here).
+        private static void FlipRowsRgb24(byte[] rgb, int width, int height)
+        {
+            int stride = width * 3;
+            byte[] tmp = new byte[stride];
+            for (int y = 0; y < height / 2; y++)
+            {
+                int top = y * stride;
+                int bottom = (height - 1 - y) * stride;
+                Buffer.BlockCopy(rgb, top, tmp, 0, stride);
+                Buffer.BlockCopy(rgb, bottom, rgb, top, stride);
+                Buffer.BlockCopy(tmp, 0, rgb, bottom, stride);
+            }
+        }
+
         private static Texture2D GetTexture(Ctx ctx, int textureIndex, bool linear)
         {
             if (textureIndex < 0 || textureIndex >= ctx.Textures.Count) return null;
@@ -1026,6 +1043,17 @@ namespace FISHHWB.MeshyImporter.Editor
             {
                 if (!MeshyWebpVp8.TryDecodeRgb(bytes, out int webpW, out int webpH, out byte[] rgb)) return null;
                 tex = new Texture2D(webpW, webpH, TextureFormat.RGB24, true, linear);
+                // MeshyWebpVp8 decodes rows top-down (row 0 = top of the image, matching
+                // libwebp's WebPDecodeRGB and every standard image codec), but Unity's
+                // texture memory is bottom-up (row 0 = UV.y=0 = the bottom of the image,
+                // the same convention GetPixel/SetPixels use). SetPixelData writes bytes
+                // verbatim with no such conversion, so without this flip every sample
+                // would read from the vertically mirrored row of the atlas -- for a
+                // simple photo that would just look upside down, but Meshy packs many
+                // independent, arbitrarily-placed UV charts into one atlas, so mirroring
+                // it sends each triangle to a completely unrelated chart and the whole
+                // texture looks shattered/scrambled instead of merely flipped.
+                FlipRowsRgb24(rgb, webpW, webpH);
                 // LoadRawTextureData requires data for the whole mip chain once mipmaps are
                 // enabled; SetPixelData(data, 0) sets just mip 0, and Apply(true) below
                 // generates the rest from it.

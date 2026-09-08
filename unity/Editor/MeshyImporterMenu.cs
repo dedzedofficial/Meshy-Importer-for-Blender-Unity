@@ -110,7 +110,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.3.5: OK\n" +
+            string message = "Meshy Importer 1.3.6: OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
                 "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +

@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.3.6
+
+### Unity: fixed the texture rendering as a shattered, scrambled mosaic instead of the correct image
+- After 1.3.4 fixed `KHR_texture_transform` so the model finally showed color and
+  detail instead of a flat blob, a new problem appeared: the texture now looked like
+  a shattered stained-glass jumble of unrelated colored shards -- geometrically the
+  right model, but with no coherent picture on its surface -- while the same file in
+  Blender rendered as a smooth, correctly painted creature.
+- This took an exhaustive process of elimination to track down, because every piece
+  of decoded data checked out correct in isolation: the meshopt-compressed
+  POSITION/NORMAL/TANGENT/TEXCOORD_0/index buffers all matched a from-scratch,
+  independently-verified reference decoder byte-for-byte; the `KHR_texture_transform`
+  math matched Blender's own `ShaderNodeMapping` values exactly; the final `mesh.uv`
+  array matched the expected values for all 842 vertices to within float precision;
+  and the decoded base-color texture bytes matched a reference libwebp decode
+  pixel-for-pixel. A from-scratch Python rasterizer, fed that exact verified data,
+  produced the correct smooth image -- proving the bug wasn't in any of the geometry,
+  UV, or texture *decoding* at all, only in how the texture ended up oriented once it
+  reached Unity's GPU.
+- Root cause: `MeshyWebpVp8.TryDecodeRgb` decodes rows top-down (row 0 = the top of
+  the image), matching libwebp and every standard image codec -- but Unity's
+  `Texture2D` memory is bottom-up (row 0 = UV.y = 0 = the *bottom* of the image, the
+  same convention `GetPixel`/`SetPixels` use). The decoded bytes were handed to
+  `Texture2D.SetPixelData` verbatim, with no flip to bridge that difference. For an
+  ordinary photo this would just render upside down and be obvious immediately; but
+  Meshy bakes many small, independent, arbitrarily-positioned UV charts into one
+  shared atlas, so flipping the whole atlas vertically sends every triangle to some
+  other, unrelated chart instead of merely turning the picture upside down -- which
+  is exactly the "shattered" look that was reported.
+- Fixed by flipping the decoded RGB24 buffer vertically (`FlipRowsRgb24` in
+  `MeshyGltfBuilder.cs`) right before it's uploaded via `SetPixelData`, for every
+  texture that goes through this WebP decode path (base color, metallic-roughness,
+  and normal). Also bumped the `ScriptedImporter` version integer (3 -> 4) per the
+  1.3.5 rule, so already-imported `.meshy` assets pick up the corrected texture
+  orientation automatically instead of needing a manual reimport.
+
 ## 1.3.5
 
 ### Unity: bumped the ScriptedImporter version -- 1.3.1-1.3.4's fixes never reached already-imported assets
