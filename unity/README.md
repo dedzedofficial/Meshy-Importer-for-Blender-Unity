@@ -1,4 +1,4 @@
-# Meshy Importer for Unity — v1.3.6
+# Meshy Importer for Unity — v1.4.0
 
 ## What it does
 

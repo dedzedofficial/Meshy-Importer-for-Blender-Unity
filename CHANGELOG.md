@@ -1,5 +1,25 @@
 # Changelog
 
+## Repository release readiness
+
+- Added MIT `LICENSE` matching the Blender extension manifest.
+- Added `CONTRIBUTING.md` with importer-specific development rules.
+- Added `SECURITY.md` with safe issue-reporting guidance.
+- Added GitHub Actions validation for JSON, Blender Python syntax, and Blender version consistency.
+- Added GitHub issue templates for bugs and feature requests.
+- Removed local `_scratch_test` fixtures from the distributable repository.
+- Synchronized Blender `bl_info` version with the 1.3.0 extension manifest.
+- Documented Unity Package Manager Git installation.
+
+## 1.4.0 / 1.3.0
+
+- Added automatic asset analysis in the Unity importer (asset type, mesh/material/texture counts, vertices, triangles, UV coverage, and skinning).
+- Added lightweight editor-time mesh optimization to improve runtime mesh locality without changing authored materials or textures.
+- Added automatic Blender post-import preparation: preserve existing Meshy UVs, generate UVs only when a mesh has none, remove unused material slots, and attach basic asset diagnostics.
+- Reduced Unity reimport overhead by removing unnecessary full-project `AssetDatabase.Refresh()` calls.
+- Reduced decoder garbage during `.meshy` loading by reusing AES-CTR buffers instead of allocating per encrypted block.
+- Added glTF normal-map scale and occlusion-strength handling.
+
 ## 1.3.6
 
 ### Unity: fixed the texture rendering as a shattered, scrambled mosaic instead of the correct image

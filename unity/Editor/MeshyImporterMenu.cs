@@ -11,7 +11,7 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.2.0";
+        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.4.0";
 
         [InitializeOnLoadMethod]
         private static void FirstRun()
@@ -110,7 +110,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.3.6: OK\n" +
+            string message = "Meshy Importer 1.4.0: OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
                 "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +
@@ -199,7 +199,8 @@ namespace FISHHWB.MeshyImporter.Editor
                 // OnImportAsset (MeshyScriptedImporter) does the full decode/build/fallback
                 // itself now, so reimporting the .meshy asset directly is all that's needed.
                 AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
-                AssetDatabase.Refresh();
+                // ImportAsset already updates this asset. A full Refresh forces Unity to rescan
+                // the entire project and can make repeated reimports dramatically slower.
                 Debug.Log("Meshy Importer: reimported " + assetPath);
             }
             catch (Exception ex)
@@ -314,14 +315,17 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             byte[] roundKeys = ExpandKey(key);
             byte[] counter = new byte[16];
+            byte[] stream = new byte[16];
+            byte[] output = new byte[data.Length];
             Buffer.BlockCopy(nonce, 0, counter, 0, 12);
             counter[15] = 2;
 
-            byte[] output = new byte[data.Length];
-
+            // Reuse the AES counter/keystream buffers. The old implementation allocated a
+            // new 16-byte array for every block, which creates hundreds of short-lived GC
+            // objects for a normal payload before the actual model import even starts.
             for (int offset = 0; offset < data.Length; offset += 16)
             {
-                byte[] stream = EncryptBlock(counter, roundKeys);
+                EncryptBlockInto(counter, roundKeys, stream);
                 int count = Math.Min(16, data.Length - offset);
                 for (int i = 0; i < count; i++)
                     output[offset + i] = (byte)(data[offset + i] ^ stream[i]);
@@ -391,20 +395,18 @@ namespace FISHHWB.MeshyImporter.Editor
             return words;
         }
 
-        private static byte[] EncryptBlock(byte[] input, byte[] rk)
+        private static void EncryptBlockInto(byte[] input, byte[] rk, byte[] output)
         {
-            byte[] s = new byte[16];
-            Buffer.BlockCopy(input, 0, s, 0, 16);
-            AddRoundKey(s, rk, 0);
+            Buffer.BlockCopy(input, 0, output, 0, 16);
+            AddRoundKey(output, rk, 0);
 
             for (int round = 1; round <= 14; round++)
             {
-                for (int i = 0; i < 16; i++) s[i] = SBox[s[i]];
-                ShiftRows(s);
-                if (round != 14) MixColumns(s);
-                AddRoundKey(s, rk, round * 16);
+                for (int i = 0; i < 16; i++) output[i] = SBox[output[i]];
+                ShiftRows(output);
+                if (round != 14) MixColumns(output);
+                AddRoundKey(output, rk, round * 16);
             }
-            return s;
         }
 
         private static void AddRoundKey(byte[] s, byte[] rk, int off)
@@ -414,10 +416,14 @@ namespace FISHHWB.MeshyImporter.Editor
 
         private static void ShiftRows(byte[] s)
         {
-            byte[] t = (byte[])s.Clone();
-            for (int r = 0; r < 4; r++)
-                for (int c = 0; c < 4; c++)
-                    s[r + 4 * c] = t[r + 4 * ((c + r) % 4)];
+            // In-place row rotation. Avoid cloning the 16-byte AES state on every block.
+            byte a, b, c, d;
+            a = s[1]; b = s[5]; c = s[9]; d = s[13];
+            s[1] = b; s[5] = c; s[9] = d; s[13] = a;
+            a = s[2]; b = s[6]; c = s[10]; d = s[14];
+            s[2] = c; s[6] = d; s[10] = a; s[14] = b;
+            a = s[3]; b = s[7]; c = s[11]; d = s[15];
+            s[3] = d; s[7] = a; s[11] = b; s[15] = c;
         }
 
         private static byte GMul(byte a, byte b)

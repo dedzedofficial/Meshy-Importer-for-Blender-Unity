@@ -1,6 +1,6 @@
 # Meshy Importer for Blender
 
-The ready-to-install Blender ZIP is:
+The ready-to-install Blender ZIP is included in this repository:
 
 `Meshy Importer for Blender & Unity - Blender.zip`
 

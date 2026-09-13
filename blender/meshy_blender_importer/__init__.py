@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Meshy Importer for Blender & Unity",
     "author": "FISHHWB",
-    "version": (1, 2, 0),
+    "version": (1, 3, 0),
     "blender": (3, 6, 0),
     "location": "File > Import > Meshy Model (.meshy)",
     "description": "Imports Meshy .meshy containers locally through Blender's native GLB importer.",
@@ -171,9 +171,17 @@ class IMPORT_OT_meshy(bpy.types.Operator, ImportHelper):
 
                 # Blender's native glTF importer handles GLB, including
                 # materials/textures and any supported mesh compression.
+                before_objects = set(bpy.data.objects)
                 result = bpy.ops.import_scene.gltf(filepath=temp_path)
                 if 'FINISHED' not in result:
                     raise RuntimeError("Blender's GLB importer did not finish.")
+
+                # Finish the import with safe, non-destructive preparation. Existing Meshy
+                # UVs are always preserved; Smart UV Project is only used when an imported
+                # mesh has no UV layer at all. This keeps the normal Meshy atlas untouched
+                # while making incomplete/utility meshes immediately usable.
+                imported_objects = [obj for obj in bpy.data.objects if obj not in before_objects]
+                _prepare_imported_objects(imported_objects)
             finally:
                 try:
                     os.remove(temp_path)
@@ -186,6 +194,78 @@ class IMPORT_OT_meshy(bpy.types.Operator, ImportHelper):
         except Exception as exc:
             self.report({'ERROR'}, f"Meshy import failed: {exc}")
             return {'CANCELLED'}
+
+
+def _prepare_imported_objects(objects):
+    """Apply lightweight post-import cleanup without changing authored Meshy data."""
+    mesh_count = 0
+    material_count = 0
+    vertex_count = 0
+    polygon_count = 0
+    generated_uvs = 0
+    skinned = 0
+
+    for obj in objects:
+        if obj.type == 'ARMATURE':
+            skinned += 1
+            continue
+        if obj.type != 'MESH' or obj.data is None:
+            continue
+
+        mesh_count += 1
+        mesh = obj.data
+        mesh.update(calc_edges=False, calc_edges_loose=False)
+        vertex_count += len(mesh.vertices)
+        polygon_count += len(mesh.polygons)
+        material_count += len([slot for slot in obj.material_slots if slot.material])
+
+        # Meshy normally supplies UVs. Do not touch those UVs. Only generate a basic UV
+        # layout when the source genuinely has none, so the asset can still be textured.
+        if len(mesh.uv_layers) == 0 and len(mesh.polygons) > 0:
+            try:
+                bpy.ops.object.select_all(action='DESELECT')
+                obj.select_set(True)
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.mode_set(mode='EDIT')
+                bpy.ops.mesh.select_all(action='SELECT')
+                bpy.ops.uv.smart_project(island_margin=0.02)
+                bpy.ops.object.mode_set(mode='OBJECT')
+                generated_uvs += 1
+            except Exception:
+                if obj.mode != 'OBJECT':
+                    try: bpy.ops.object.mode_set(mode='OBJECT')
+                    except Exception: pass
+
+        # Remove material slots that are not referenced by any polygon. This does not delete
+        # the material datablock and avoids changing the actual visible material assignments.
+        try:
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.material_slot_remove_unused()
+        except Exception:
+            pass
+
+        # Store useful diagnostics on the object for later inspection without creating extra
+        # files or slowing the importer with an external analysis pass.
+        obj["FISHHWB_Meshy_VertexCount"] = len(mesh.vertices)
+        obj["FISHHWB_Meshy_PolygonCount"] = len(mesh.polygons)
+        obj["FISHHWB_Meshy_HasUV"] = len(mesh.uv_layers) > 0
+
+    # Put the selection back into a predictable state.
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        if obj.name in bpy.data.objects:
+            obj.select_set(False)
+
+    # Record a compact import summary on the scene for scripts/tools that want to inspect it.
+    scene = bpy.context.scene
+    scene["FISHHWB_Meshy_LastImport_Meshes"] = mesh_count
+    scene["FISHHWB_Meshy_LastImport_Materials"] = material_count
+    scene["FISHHWB_Meshy_LastImport_Vertices"] = vertex_count
+    scene["FISHHWB_Meshy_LastImport_Polygons"] = polygon_count
+    scene["FISHHWB_Meshy_LastImport_GeneratedUVs"] = generated_uvs
+    scene["FISHHWB_Meshy_LastImport_Rigged"] = skinned > 0
 
 
 def menu_func_import(self, context):

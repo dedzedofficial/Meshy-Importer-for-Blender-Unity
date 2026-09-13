@@ -1,6 +1,8 @@
 # Meshy Importer for Blender & Unity
 
-**Version 1.3.6 (Unity) / 1.2.0 (Blender) — created and maintained by FISHHWB**
+**Version 1.4.0 (Unity) / 1.3.0 (Blender) — created and maintained by FISHHWB**
+
+[![Validate repository](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml/badge.svg)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Import real Meshy `.meshy` model payloads into **Unity and Blender** with a local decoder. Unity users can drop `.meshy` files into `Assets` and let the Unity Asset Pipeline handle the source file automatically; Blender users can use **File > Import > Meshy Model (.meshy)**.
 
@@ -26,6 +28,16 @@ Unity's Scripted Importer system is specifically intended for custom file extens
 - **Tools > Meshy > Install UnityGLTF (Optional Fallback)**
 - **Tools > Meshy > Support / Donate on Patreon**
 - **Tools > Meshy > Show Welcome Again**
+
+### Install Unity package
+
+In Unity, open **Window > Package Manager**, choose **+ > Add package from git URL...**, and enter:
+
+```text
+https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity
+```
+
+You can also clone/download the repository and add the `unity` folder as a local package.
 
 ### Unity dependency
 
@@ -68,6 +80,10 @@ The Blender extension reconstructs the GLB locally and passes it to Blender's na
 | Blender 5.x | Yes | Yes |
 
 See **COMPATIBILITY.md** for details.
+
+## 🧰 Repository development
+
+The repository includes GitHub Actions validation for JSON, Blender Python syntax, and Blender version metadata. See `CONTRIBUTING.md` before making changes.
 
 ## 🔒 Privacy
 

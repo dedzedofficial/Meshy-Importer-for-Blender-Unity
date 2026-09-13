@@ -1,0 +1,35 @@
+name: Bug report
+description: Report an import or installation problem
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: input
+    id: importer
+    attributes:
+      label: Importer version
+      placeholder: "Unity 1.4.0 / Blender 1.3.0"
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Unity or Blender version
+      placeholder: "Unity 2022.3.x or Blender 5.x"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the expected result and actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console/error output
+      render: text
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps

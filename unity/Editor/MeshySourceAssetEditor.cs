@@ -28,8 +28,8 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorGUILayout.LabelField("Meshy Importer", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Builds meshes, materials, textures, and skinning directly from the .meshy payload. " +
-                "UnityGLTF/glTFast are only used as an automatic fallback for the rare file that needs " +
-                "a glTF extension the native importer doesn't implement yet.",
+                "The importer also performs lightweight asset analysis and editor-time mesh optimization " +
+                "to reduce repeated setup work and improve runtime mesh locality.",
                 MessageType.Info);
 
             if (source != null)
@@ -38,6 +38,17 @@ namespace FISHHWB.MeshyImporter.Editor
                 EditorGUILayout.LabelField("Source", source.SourcePath);
                 EditorGUILayout.LabelField("Size", FormatBytes(source.SourceSize));
                 EditorGUILayout.LabelField("Status", source.Status);
+
+                EditorGUILayout.Space(6);
+                EditorGUILayout.LabelField("Asset Analysis", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Type", string.IsNullOrEmpty(source.AssetType) ? "Unknown" : source.AssetType);
+                EditorGUILayout.LabelField("Meshes", source.MeshCount.ToString());
+                EditorGUILayout.LabelField("Vertices", source.VertexCount.ToString("N0"));
+                EditorGUILayout.LabelField("Triangles", source.TriangleCount.ToString("N0"));
+                EditorGUILayout.LabelField("Materials", source.MaterialCount.ToString());
+                EditorGUILayout.LabelField("Textures", source.TextureCount.ToString());
+                EditorGUILayout.LabelField("Missing UV sets", source.MissingUvCount.ToString());
+                EditorGUILayout.LabelField("Skinning", source.Skinned ? "Detected" : "None");
             }
 
             EditorGUILayout.Space(6);

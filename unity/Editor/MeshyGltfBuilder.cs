@@ -51,7 +51,11 @@ namespace FISHHWB.MeshyImporter.Editor
             public int MeshCount;
             public int MaterialCount;
             public int TextureCount;
+            public int VertexCount;
+            public int TriangleCount;
+            public int MissingUvCount;
             public bool Skinned;
+            public string AssetType;
         }
 
         private sealed class Ctx
@@ -248,6 +252,7 @@ namespace FISHHWB.MeshyImporter.Editor
             foreach (var m in ctx.MaterialCache.Values) result.SubAssets.Add(m);
             result.TextureCount = ctx.TextureCache.Values.Select(t => t).Distinct().Count();
             result.MaterialCount = ctx.MaterialCache.Count;
+            result.AssetType = DetectAssetType(ctx, result);
             foreach (var kv in ctx.NodeObjects) result.Nodes[kv.Key] = kv.Value;
 
             return result;
@@ -690,6 +695,15 @@ namespace FISHHWB.MeshyImporter.Editor
                 if (!MeshyMiniJson.Has(attrs, "NORMAL")) mesh.RecalculateNormals();
                 if (!MeshyMiniJson.Has(attrs, "TANGENT") && MeshyMiniJson.Has(attrs, "TEXCOORD_0")) mesh.RecalculateTangents();
 
+                // Keep the imported mesh visually identical while letting Unity reorder
+                // internal mesh data for better vertex/index locality. This is editor-time
+                // work, so runtime loading has less work to do.
+                try { MeshUtility.Optimize(mesh); } catch (Exception) { /* optional optimization */ }
+
+                result.VertexCount += vertices.Length;
+                result.TriangleCount += mesh.triangles.Length / 3;
+                if (!MeshyMiniJson.Has(attrs, "TEXCOORD_0")) result.MissingUvCount++;
+
                 Material mat = MeshyMiniJson.Has(prim, "material")
                     ? GetOrBuildMaterial(ctx, MeshyMiniJson.GetInt(prim, "material", -1))
                     : GetOrBuildMaterial(ctx, -1);
@@ -720,6 +734,30 @@ namespace FISHHWB.MeshyImporter.Editor
                 result.SubAssets.Add(mesh);
                 result.MeshCount++;
             }
+        }
+
+        private static string DetectAssetType(Ctx ctx, BuildResult result)
+        {
+            if (result.Skinned) return "Character / Rigged";
+
+            int meshNodes = 0;
+            bool environmentHint = false;
+            bool propHint = false;
+            foreach (var node in ctx.Nodes)
+            {
+                var obj = MeshyMiniJson.AsObject(node);
+                string name = MeshyMiniJson.GetString(obj, "name", "");
+                if (string.IsNullOrEmpty(name)) continue;
+                string n = name.ToLowerInvariant();
+                if (n.Contains("body") || n.Contains("head") || n.Contains("face") || n.Contains("hair") || n.Contains("arm") || n.Contains("leg")) meshNodes++;
+                if (n.Contains("wall") || n.Contains("floor") || n.Contains("room") || n.Contains("building") || n.Contains("terrain")) environmentHint = true;
+                if (n.Contains("chair") || n.Contains("table") || n.Contains("weapon") || n.Contains("prop") || n.Contains("item")) propHint = true;
+            }
+
+            if (environmentHint) return "Environment";
+            if (meshNodes >= 2) return "Character / Model";
+            if (propHint || result.MeshCount <= 2) return "Prop / Object";
+            return "3D Model";
         }
 
         private static Matrix4x4 ConvertMatrix(float[] m16)
@@ -855,6 +893,8 @@ namespace FISHHWB.MeshyImporter.Editor
                 if (tex != null)
                 {
                     SetTexture(mat, ctx, "_BumpMap", "_BumpMap", tex);
+                    float normalScale = (float)MeshyMiniJson.GetNumber(normalTex, "scale", 1);
+                    SetFloat(mat, ctx, "_BumpScale", "_BumpScale", normalScale);
                     mat.EnableKeyword("_NORMALMAP");
                 }
             }
@@ -863,7 +903,11 @@ namespace FISHHWB.MeshyImporter.Editor
             if (occTex != null)
             {
                 var tex = GetTexture(ctx, MeshyMiniJson.GetInt(occTex, "index", -1), linear: true);
-                if (tex != null) SetTexture(mat, ctx, "_OcclusionMap", "_OcclusionMap", tex);
+                if (tex != null)
+                {
+                    SetTexture(mat, ctx, "_OcclusionMap", "_OcclusionMap", tex);
+                    SetFloat(mat, ctx, "_OcclusionStrength", "_OcclusionStrength", (float)MeshyMiniJson.GetNumber(occTex, "strength", 1));
+                }
             }
 
             var emissiveFactorArr = MeshyMiniJson.GetArray(m, "emissiveFactor");

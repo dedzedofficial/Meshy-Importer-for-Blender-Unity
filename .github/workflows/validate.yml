@@ -1,0 +1,44 @@
+name: Validate repository
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for p in Path('.').rglob('*.json'):
+              if any(part in {'.git', '_scratch_test'} for part in p.parts):
+                  continue
+              json.loads(p.read_text(encoding='utf-8'))
+              print('OK', p)
+          PY
+
+      - name: Validate Blender Python
+        run: python -m compileall -q blender/meshy_blender_importer
+
+      - name: Check Blender versions match
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          import re
+          init = Path('blender/meshy_blender_importer/__init__.py').read_text(encoding='utf-8')
+          m = re.search(r'"version"\s*:\s*\((\d+),\s*(\d+),\s*(\d+)\)', init)
+          assert m, 'bl_info version not found'
+          pyver = '.'.join(m.groups())
+          manifest = Path('blender/meshy_blender_importer/blender_manifest.toml').read_text(encoding='utf-8')
+          mm = re.search(r'^version\s*=\s*"([^"]+)"', manifest, re.M)
+          assert mm, 'manifest version not found'
+          assert pyver == mm.group(1), f'Version mismatch: {pyver} vs {mm.group(1)}'
+          print('Blender version:', pyver)
+          PY
