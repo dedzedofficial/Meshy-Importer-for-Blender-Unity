@@ -8,37 +8,52 @@ using UnityEngine;
 
 namespace FISHHWB.MeshyImporter.Editor
 {
-    // IMPORTANT: bump this integer whenever a change to the decode/build pipeline
-    // (MeshyGltfBuilder, MeshyDecoder, MeshyWebpVp8, MeshyMeshopt, etc.) alters what
-    // gets baked into an already-imported .meshy asset. With AllowCaching = true,
-    // Unity only reimports a cached asset when its source file changes or this
-    // version number changes -- editing the importer's C# alone does nothing to
-    // .meshy files a user already imported under an older version of this package.
-    // That gap went unnoticed across 1.3.1-1.3.4 (the black-render, orange-emission,
-    // and KHR_texture_transform/"flat blob" fixes): the shipped code was corrected
-    // each time, but this number stayed at 2, so anyone who had already imported a
-    // model kept seeing the pre-fix result -- notably a flat, plain-colored blob in
-    // Unity next to a correctly textured Blender import of the same file -- until
-    // they manually forced a reimport. Bumped to 3 so updating to 1.3.5 forces every
-    // existing .meshy asset in a project to reimport automatically.
-    [ScriptedImporter(5, new[] { "meshy" }, AllowCaching = true)]
+    // IMPORTANT: bump the version integer below whenever a change to the decode/build
+    // pipeline (MeshyGltfBuilder, MeshyUvRepair, MeshyWebpVp8, MeshyMeshopt, ...) alters
+    // what gets baked into an already-imported .meshy asset. With AllowCaching = true,
+    // Unity only reimports a cached asset when its source file, its import settings or
+    // this number changes -- editing the importer's C# alone does nothing to .meshy files
+    // a user already imported under an older version of this package. (1.3.1-1.3.4
+    // shipped fixes that never reached existing assets because this was not bumped.)
+    // 6 = 1.4.1: 32-bit indices for large meshes, UV auto-repair, HDRP materials.
+    [ScriptedImporter(6, new[] { "meshy" }, AllowCaching = true)]
     public sealed class MeshyScriptedImporter : ScriptedImporter
     {
+        [Tooltip("Uniform scale applied to the imported model's root.")]
+        [SerializeField] private float scaleFactor = 1f;
+
+        [Tooltip("Add a MeshCollider to every static (non-skinned) mesh.")]
+        [SerializeField] private bool generateColliders;
+
+        [Tooltip("Reorder vertex/index data for GPU cache locality (MeshUtility.Optimize). The mesh looks identical.")]
+        [SerializeField] private bool optimizeMeshes = true;
+
+        [Tooltip("Fix broken UVs (NaN, wild outliers, collapsed triangles) and give UV-less meshes a box projection. Valid UVs are never changed.")]
+        [SerializeField] private bool autoRepairUvs = true;
+
         public override void OnImportAsset(AssetImportContext ctx)
         {
             var meta = ScriptableObject.CreateInstance<MeshySourceAsset>();
             long size = 0;
             string status;
+            string generatedGlb = null;
             string assetName = Path.GetFileNameWithoutExtension(ctx.assetPath);
 
             try
             {
-                string fullPath = ProjectPath(ctx.assetPath);
+                string fullPath = MeshyPaths.ProjectPath(ctx.assetPath);
                 if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
 
                 byte[] glb = MeshyImporterMenu.DecodeFileForEditor(ctx.assetPath);
 
-                var build = MeshyGltfBuilder.Build(glb, assetName, out string unsupportedReason);
+                var options = new MeshyGltfBuilder.BuildOptions
+                {
+                    ScaleFactor = scaleFactor > 0f ? scaleFactor : 1f,
+                    GenerateColliders = generateColliders,
+                    OptimizeMeshes = optimizeMeshes,
+                    AutoRepairUvs = autoRepairUvs,
+                };
+                var build = MeshyGltfBuilder.Build(glb, assetName, options, out string unsupportedReason);
 
                 if (build != null)
                 {
@@ -58,27 +73,41 @@ namespace FISHHWB.MeshyImporter.Editor
 
                     meta.SetAnalysis(build.AssetType, build.MeshCount, build.MaterialCount, build.TextureCount,
                         build.VertexCount, build.TriangleCount, build.MissingUvCount, build.Skinned);
-                    status = $"Imported natively: {build.MeshCount} mesh(es), {build.MaterialCount} material(s), " +
-                             $"{build.TextureCount} texture(s){(build.Skinned ? ", skinned" : "")}. " +
-                             "Automatic cleanup/analysis applied. No UnityGLTF/glTFast dependency used.";
+                    meta.SetUvRepair(build.UvBadVertices, build.UvRepairedVertices, build.UvRegeneratedMeshes);
+                    meta.SetRenderPipeline(build.Pipeline.ToString());
 
-                    CleanupStaleGlbCompanion(ctx.assetPath);
+                    status = $"Imported natively: {build.MeshCount} mesh(es), {build.MaterialCount} material(s), " +
+                             $"{build.TextureCount} texture(s){(build.Skinned ? ", skinned" : "")}.";
+                    if (build.UvBadVertices > 0 || build.UvRegeneratedMeshes > 0)
+                        status += $" UV repair: {build.UvBadVertices} bad vertex UV(s) fixed" +
+                                  (build.UvRegeneratedMeshes > 0 ? $", {build.UvRegeneratedMeshes} mesh(es) given new UVs" : "") + ".";
+                    foreach (var note in build.Notes) status += " " + note;
+
+                    // Only removes a .glb this importer itself wrote earlier (fallback path).
+                    MeshyGeneratedGlbRegistry.DeleteIfGenerated(Path.ChangeExtension(ctx.assetPath, ".glb"));
                 }
                 else
                 {
                     // Fallback: something in this specific file isn't implemented by the native
-                    // builder yet (e.g. EXT_meshopt_compression). Write the reconstructed .glb
-                    // sibling and let whatever glTF importer is installed (UnityGLTF/glTFast)
-                    // handle just this file, so it still imports instead of silently failing.
-                    // Write the file now (plain disk IO is safe here), but defer asking
-                    // Unity to import it -- calling AssetDatabase.ImportAsset for another
-                    // asset from inside this asset's own OnImportAsset is unsafe/unsupported.
+                    // builder. Write the reconstructed .glb next to it and let whatever glTF
+                    // importer is installed (UnityGLTF/glTFast) handle just this file.
+                    // Write the file now (plain disk IO is safe here), but defer asking Unity to
+                    // import it -- calling AssetDatabase.ImportAsset for another asset from inside
+                    // this asset's own OnImportAsset is unsafe/unsupported. Never overwrite a
+                    // .glb the user made themselves: use a distinct name instead.
                     string glbPath = Path.ChangeExtension(ctx.assetPath, ".glb");
-                    File.WriteAllBytes(ProjectPath(glbPath), glb);
+                    if (!MeshyGeneratedGlbRegistry.TryWrite(glbPath, glb))
+                    {
+                        glbPath = Path.ChangeExtension(ctx.assetPath, null) + "_meshy.glb";
+                        if (!MeshyGeneratedGlbRegistry.TryWrite(glbPath, glb))
+                            throw new IOException("Both " + Path.ChangeExtension(ctx.assetPath, ".glb") + " and " + glbPath +
+                                                  " already exist and were not created by the Meshy importer; not overwriting them.");
+                    }
+                    generatedGlb = glbPath;
                     EditorApplication.delayCall += () => AssetDatabase.ImportAsset(glbPath, ImportAssetOptions.ForceUpdate);
 
                     status = $"Native import not available for this file ({unsupportedReason}). " +
-                              "Fell back to generating a .glb companion for UnityGLTF/glTFast.";
+                             "Fell back to generating " + Path.GetFileName(glbPath) + " for UnityGLTF/glTFast.";
                     Debug.LogWarning("Meshy Importer: " + ctx.assetPath + " " + status);
                 }
             }
@@ -88,36 +117,8 @@ namespace FISHHWB.MeshyImporter.Editor
                 Debug.LogError("Meshy Importer: failed to import " + ctx.assetPath + "\n" + ex);
             }
 
-            meta.SetMetadata(ctx.assetPath, Path.ChangeExtension(ctx.assetPath, ".glb"), size, status);
+            meta.SetMetadata(ctx.assetPath, generatedGlb, size, status);
             ctx.AddObjectToAsset("MeshySource", meta);
-        }
-
-        private static void CleanupStaleGlbCompanion(string meshyAssetPath)
-        {
-            // Plain File.Delete only -- calling into AssetDatabase from inside another
-            // asset's OnImportAsset is unsafe/unsupported. Unity notices the missing
-            // file and drops the stale database entry on its own on the next refresh.
-            string glbPath = Path.ChangeExtension(meshyAssetPath, ".glb");
-            string full = ProjectPath(glbPath);
-            if (File.Exists(full))
-            {
-                try
-                {
-                    File.Delete(full);
-                    string metaPath = full + ".meta";
-                    if (File.Exists(metaPath)) File.Delete(metaPath);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning("Meshy Importer: could not remove stale generated GLB: " + ex.Message);
-                }
-            }
-        }
-
-        internal static string ProjectPath(string assetPath)
-        {
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-            return Path.Combine(projectRoot, assetPath.Replace('\\', Path.DirectorySeparatorChar));
         }
     }
 }

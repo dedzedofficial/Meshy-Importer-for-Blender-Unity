@@ -12,3 +12,4 @@ _scratch_test/
 
 __pycache__/
 *.pyc
+bin/

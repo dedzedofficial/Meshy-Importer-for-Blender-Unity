@@ -15,8 +15,13 @@ namespace FISHHWB.MeshyImporter
         [SerializeField] private int triangleCount;
         [SerializeField] private int missingUvCount;
         [SerializeField] private bool skinned;
+        [SerializeField] private int uvBadVertices;
+        [SerializeField] private int uvRepairedVertices;
+        [SerializeField] private int uvRegeneratedMeshes;
+        [SerializeField] private string renderPipeline;
 
         public string SourcePath => sourcePath;
+        /// <summary>The .glb written on the fallback path, or null/empty for a native import.</summary>
         public string GeneratedGlbPath => generatedGlbPath;
         public long SourceSize => sourceSize;
         public string Status => status;
@@ -28,6 +33,10 @@ namespace FISHHWB.MeshyImporter
         public int TriangleCount => triangleCount;
         public int MissingUvCount => missingUvCount;
         public bool Skinned => skinned;
+        public int UvBadVertices => uvBadVertices;
+        public int UvRepairedVertices => uvRepairedVertices;
+        public int UvRegeneratedMeshes => uvRegeneratedMeshes;
+        public string RenderPipeline => renderPipeline;
 
         public void SetMetadata(string source, string glb, long size, string importStatus)
         { sourcePath = source; generatedGlbPath = glb; sourceSize = size; status = importStatus; }
@@ -37,5 +46,10 @@ namespace FISHHWB.MeshyImporter
             assetType = type; meshCount = meshes; materialCount = materials; textureCount = textures;
             vertexCount = vertices; triangleCount = triangles; missingUvCount = missingUvs; skinned = isSkinned;
         }
+
+        public void SetUvRepair(int badVertices, int repairedVertices, int regeneratedMeshes)
+        { uvBadVertices = badVertices; uvRepairedVertices = repairedVertices; uvRegeneratedMeshes = regeneratedMeshes; }
+
+        public void SetRenderPipeline(string pipeline) { renderPipeline = pipeline; }
     }
 }

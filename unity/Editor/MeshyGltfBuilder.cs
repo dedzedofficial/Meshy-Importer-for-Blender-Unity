@@ -12,10 +12,10 @@ namespace FISHHWB.MeshyImporter.Editor
     /// decrypted .meshy payload's GLB bytes, without going through UnityGLTF or
     /// glTFast. Covers the common core of glTF 2.0 that Meshy exports use:
     /// triangle meshes, pbrMetallicRoughness materials with embedded textures,
-    /// and skinning. Extensions this builder does not implement (chiefly
-    /// EXT_meshopt_compression) are detected up front so the caller can fall
-    /// back to the old .glb + external-importer path for just that file
-    /// instead of failing silently.
+    /// skinning, and the extensions listed in SupportedExtensions (including
+    /// meshopt geometry and WebP textures). A required extension outside that
+    /// list is detected up front so the caller can fall back to the .glb +
+    /// external-importer path for just that file instead of failing silently.
     /// </summary>
     internal static class MeshyGltfBuilder
     {
@@ -43,6 +43,16 @@ namespace FISHHWB.MeshyImporter.Editor
             "EXT_texture_webp",
         };
 
+        public sealed class BuildOptions
+        {
+            public float ScaleFactor = 1f;
+            public bool GenerateColliders;
+            public bool OptimizeMeshes = true;
+            public bool AutoRepairUvs = true;
+        }
+
+        public enum RenderPipelineKind { BuiltIn, Universal, HighDefinition }
+
         public sealed class BuildResult
         {
             public GameObject Root;
@@ -56,6 +66,11 @@ namespace FISHHWB.MeshyImporter.Editor
             public int MissingUvCount;
             public bool Skinned;
             public string AssetType;
+            public int UvBadVertices;
+            public int UvRepairedVertices;
+            public int UvRegeneratedMeshes;
+            public RenderPipelineKind Pipeline;
+            public readonly List<string> Notes = new List<string>();
         }
 
         private sealed class Ctx
@@ -69,7 +84,10 @@ namespace FISHHWB.MeshyImporter.Editor
             public readonly Dictionary<int, GameObject> NodeObjects = new Dictionary<int, GameObject>();
             public readonly Dictionary<int, byte[]> BufferViewCache = new Dictionary<int, byte[]>();
             public Shader LitShader;
-            public bool UsingUrp;
+            public RenderPipelineKind Pipeline;
+            public BuildOptions Options;
+            public bool UsingUrp => Pipeline == RenderPipelineKind.Universal;
+            public bool UsingHdrp => Pipeline == RenderPipelineKind.HighDefinition;
         }
 
         /// <summary>
@@ -151,8 +169,13 @@ namespace FISHHWB.MeshyImporter.Editor
 
         public static BuildResult Build(byte[] glb, string assetName, out string unsupportedReason)
         {
+            return Build(glb, assetName, new BuildOptions(), out unsupportedReason);
+        }
+
+        public static BuildResult Build(byte[] glb, string assetName, BuildOptions options, out string unsupportedReason)
+        {
             unsupportedReason = null;
-            var ctx = new Ctx();
+            var ctx = new Ctx { Options = options ?? new BuildOptions() };
 
             string json = ReadGlbChunks(glb, out ctx.Bin);
             ctx.Root = MeshyMiniJson.AsObject(MeshyMiniJson.Parse(json));
@@ -185,13 +208,23 @@ namespace FISHHWB.MeshyImporter.Editor
 
             if (!ResolveBuffers(ctx, out unsupportedReason)) return null;
 
-            ctx.UsingUrp = GraphicsSettings.currentRenderPipeline != null;
-            ctx.LitShader = ctx.UsingUrp
-                ? Shader.Find("Universal Render Pipeline/Lit")
-                : Shader.Find("Standard");
-            if (ctx.LitShader == null) ctx.LitShader = Shader.Find("Standard") ?? Shader.Find("Diffuse");
+            // "Any render pipeline asset" used to mean URP here, so HDRP projects got the
+            // built-in Standard shader and rendered pink. Tell the pipelines apart by the
+            // asset's type name (no hard dependency on either SRP package).
+            ctx.Pipeline = DetectPipeline();
+            switch (ctx.Pipeline)
+            {
+                case RenderPipelineKind.HighDefinition: ctx.LitShader = Shader.Find("HDRP/Lit"); break;
+                case RenderPipelineKind.Universal: ctx.LitShader = Shader.Find("Universal Render Pipeline/Lit"); break;
+                default: ctx.LitShader = Shader.Find("Standard"); break;
+            }
+            if (ctx.LitShader == null)
+            {
+                ctx.Pipeline = RenderPipelineKind.BuiltIn;
+                ctx.LitShader = Shader.Find("Standard") ?? Shader.Find("Diffuse");
+            }
 
-            var result = new BuildResult();
+            var result = new BuildResult { Pipeline = ctx.Pipeline };
 
             // Pass A: create a bare GameObject per node with local transform, and parent them.
             for (int i = 0; i < ctx.Nodes.Count; i++)
@@ -233,6 +266,8 @@ namespace FISHHWB.MeshyImporter.Editor
             }
 
             var sceneRoot = new GameObject(string.IsNullOrEmpty(assetName) ? "Meshy Model" : assetName);
+            if (ctx.Options.ScaleFactor > 0f && !Mathf.Approximately(ctx.Options.ScaleFactor, 1f))
+                sceneRoot.transform.localScale = Vector3.one * ctx.Options.ScaleFactor;
             foreach (int ri in rootNodeIndices)
                 if (ctx.NodeObjects.TryGetValue(ri, out var rgo)) rgo.transform.SetParent(sceneRoot.transform, false);
             result.Root = sceneRoot;
@@ -253,6 +288,8 @@ namespace FISHHWB.MeshyImporter.Editor
             result.TextureCount = ctx.TextureCache.Values.Select(t => t).Distinct().Count();
             result.MaterialCount = ctx.MaterialCache.Count;
             result.AssetType = DetectAssetType(ctx, result);
+            if (ctx.UsingHdrp && ctx.Materials.Count > 0)
+                result.Notes.Add("HDRP: base colour, normal and emission maps are set; metallic/roughness and occlusion are not packed into an HDRP mask map yet.");
             foreach (var kv in ctx.NodeObjects) result.Nodes[kv.Key] = kv.Value;
 
             return result;
@@ -574,6 +611,10 @@ namespace FISHHWB.MeshyImporter.Editor
                 var mesh = new Mesh { name = $"{MeshyMiniJson.GetString(meshDef, "name", "mesh" + meshIndex)}_{p}" };
 
                 var posRaw = ReadAccessorFloats(ctx, MeshyMiniJson.GetInt(attrs, "POSITION"));
+                // Unity meshes default to 16-bit indices; above 65,535 vertices the triangles
+                // silently wrap around and the mesh comes out shredded. Meshy's high-poly
+                // exports easily exceed that, so switch to 32-bit indices when needed.
+                mesh.indexFormat = posRaw.Length > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
                 var vertices = new Vector3[posRaw.Length];
                 for (int i = 0; i < posRaw.Length; i++)
                     vertices[i] = ConvertPoint(new Vector3(posRaw[i][0], posRaw[i][1], posRaw[i][2]));
@@ -693,12 +734,29 @@ namespace FISHHWB.MeshyImporter.Editor
 
                 mesh.RecalculateBounds();
                 if (!MeshyMiniJson.Has(attrs, "NORMAL")) mesh.RecalculateNormals();
-                if (!MeshyMiniJson.Has(attrs, "TANGENT") && MeshyMiniJson.Has(attrs, "TEXCOORD_0")) mesh.RecalculateTangents();
+
+                bool hasUv = MeshyMiniJson.Has(attrs, "TEXCOORD_0");
+                if (ctx.Options.AutoRepairUvs)
+                {
+                    var repaired = MeshyUvRepair.Repair(vertices, hasUv ? mesh.uv : null, mesh.triangles, mesh.normals, out var uvStats);
+                    if (repaired != null)
+                    {
+                        mesh.uv = repaired;
+                        hasUv = true;
+                        result.UvBadVertices += uvStats.BadVertices;
+                        result.UvRepairedVertices += uvStats.RepairedVertices;
+                        if (uvStats.Regenerated) result.UvRegeneratedMeshes++;
+                    }
+                }
+                if (!MeshyMiniJson.Has(attrs, "TANGENT") && hasUv) mesh.RecalculateTangents();
 
                 // Keep the imported mesh visually identical while letting Unity reorder
                 // internal mesh data for better vertex/index locality. This is editor-time
                 // work, so runtime loading has less work to do.
-                try { MeshUtility.Optimize(mesh); } catch (Exception) { /* optional optimization */ }
+                if (ctx.Options.OptimizeMeshes)
+                {
+                    try { MeshUtility.Optimize(mesh); } catch (Exception) { /* optional optimization */ }
+                }
 
                 result.VertexCount += vertices.Length;
                 result.TriangleCount += mesh.triangles.Length / 3;
@@ -728,6 +786,8 @@ namespace FISHHWB.MeshyImporter.Editor
                     mf.sharedMesh = mesh;
                     var mr = target.AddComponent<MeshRenderer>();
                     mr.sharedMaterial = mat;
+                    if (ctx.Options.GenerateColliders)
+                        target.AddComponent<MeshCollider>().sharedMesh = mesh;
                 }
 
                 mesh.name = target.name;
@@ -864,7 +924,7 @@ namespace FISHHWB.MeshyImporter.Editor
             var bcf = pbr != null ? MeshyMiniJson.GetArray(pbr, "baseColorFactor") : null;
             if (bcf != null)
                 baseColor = new Color((float)MeshyMiniJson.AsNumber(bcf[0]), (float)MeshyMiniJson.AsNumber(bcf[1]), (float)MeshyMiniJson.AsNumber(bcf[2]), bcf.Count > 3 ? (float)MeshyMiniJson.AsNumber(bcf[3]) : 1f);
-            SetColor(mat, ctx, "_BaseColor", "_Color", baseColor);
+            SetColor(mat, ctx, "_BaseColor", "_Color", baseColor, "_BaseColor");
 
             float metallic = pbr != null ? (float)MeshyMiniJson.GetNumber(pbr, "metallicFactor", 1) : 1f;
             float roughness = pbr != null ? (float)MeshyMiniJson.GetNumber(pbr, "roughnessFactor", 1) : 1f;
@@ -875,11 +935,11 @@ namespace FISHHWB.MeshyImporter.Editor
             if (baseColorTex != null)
             {
                 var tex = GetTexture(ctx, MeshyMiniJson.GetInt(baseColorTex, "index", -1), linear: false);
-                if (tex != null) SetTexture(mat, ctx, "_BaseMap", "_MainTex", tex);
+                if (tex != null) SetTexture(mat, ctx, "_BaseMap", "_MainTex", tex, "_BaseColorMap");
             }
 
             var mrTex = pbr != null ? MeshyMiniJson.Get(pbr, "metallicRoughnessTexture") : null;
-            if (mrTex != null)
+            if (mrTex != null && !ctx.UsingHdrp)
             {
                 var packed = GetMetallicSmoothnessTexture(ctx, MeshyMiniJson.GetInt(mrTex, "index", -1));
                 if (packed != null) SetTexture(mat, ctx, "_MetallicGlossMap", "_MetallicGlossMap", packed);
@@ -892,15 +952,15 @@ namespace FISHHWB.MeshyImporter.Editor
                 var tex = GetTexture(ctx, MeshyMiniJson.GetInt(normalTex, "index", -1), linear: true);
                 if (tex != null)
                 {
-                    SetTexture(mat, ctx, "_BumpMap", "_BumpMap", tex);
+                    SetTexture(mat, ctx, "_BumpMap", "_BumpMap", tex, "_NormalMap");
                     float normalScale = (float)MeshyMiniJson.GetNumber(normalTex, "scale", 1);
-                    SetFloat(mat, ctx, "_BumpScale", "_BumpScale", normalScale);
+                    SetFloat(mat, ctx, "_BumpScale", "_BumpScale", normalScale, "_NormalScale");
                     mat.EnableKeyword("_NORMALMAP");
                 }
             }
 
             var occTex = MeshyMiniJson.Get(m, "occlusionTexture");
-            if (occTex != null)
+            if (occTex != null && !ctx.UsingHdrp)
             {
                 var tex = GetTexture(ctx, MeshyMiniJson.GetInt(occTex, "index", -1), linear: true);
                 if (tex != null)
@@ -924,12 +984,12 @@ namespace FISHHWB.MeshyImporter.Editor
             {
                 mat.EnableKeyword("_EMISSION");
                 mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-                SetColor(mat, ctx, "_EmissionColor", "_EmissionColor", emissive);
+                SetColor(mat, ctx, "_EmissionColor", "_EmissionColor", emissive, "_EmissiveColor");
                 var emTex = MeshyMiniJson.Get(m, "emissiveTexture");
                 if (emTex != null)
                 {
                     var tex = GetTexture(ctx, MeshyMiniJson.GetInt(emTex, "index", -1), linear: false);
-                    if (tex != null) SetTexture(mat, ctx, "_EmissionMap", "_EmissionMap", tex);
+                    if (tex != null) SetTexture(mat, ctx, "_EmissionMap", "_EmissionMap", tex, "_EmissiveColorMap");
                 }
             }
             // Deliberately no synthetic "always emit the base color texture" fallback here:
@@ -946,6 +1006,7 @@ namespace FISHHWB.MeshyImporter.Editor
             string alphaMode = MeshyMiniJson.GetString(m, "alphaMode", "OPAQUE");
             bool doubleSided = MeshyMiniJson.GetBool(m, "doubleSided", false);
             ApplySurfaceMode(mat, ctx, alphaMode, (float)MeshyMiniJson.GetNumber(m, "alphaCutoff", 0.5), doubleSided);
+            if (ctx.UsingHdrp) ResetHdrpKeywords(mat);
 
             ctx.MaterialCache[materialIndex] = mat;
             return mat;
@@ -954,6 +1015,21 @@ namespace FISHHWB.MeshyImporter.Editor
         private static void ApplySurfaceMode(Material mat, Ctx ctx, string alphaMode, float cutoff, bool doubleSided)
         {
             if (doubleSided) mat.SetInt("_Cull", (int)CullMode.Off);
+
+            if (ctx.UsingHdrp)
+            {
+                if (doubleSided && mat.HasProperty("_DoubleSidedEnable")) mat.SetFloat("_DoubleSidedEnable", 1f);
+                if (alphaMode == "MASK")
+                {
+                    mat.SetFloat("_AlphaCutoffEnable", 1f);
+                    mat.SetFloat("_AlphaCutoff", cutoff);
+                }
+                else if (alphaMode == "BLEND")
+                {
+                    mat.SetFloat("_SurfaceType", 1f);
+                }
+                return;
+            }
 
             if (alphaMode == "MASK")
             {
@@ -994,22 +1070,58 @@ namespace FISHHWB.MeshyImporter.Editor
             }
         }
 
-        private static void SetColor(Material mat, Ctx ctx, string urpProp, string legacyProp, Color c)
+        // Property names differ per pipeline: URP, built-in (legacy) and HDRP. When no HDRP
+        // name is given the URP name is used (HDRP/Lit shares _BaseColor/_Metallic/_Smoothness).
+        private static string Prop(Ctx ctx, string urpProp, string legacyProp, string hdrpProp)
         {
-            string prop = ctx.UsingUrp ? urpProp : legacyProp;
+            if (ctx.UsingHdrp) return hdrpProp ?? urpProp;
+            return ctx.UsingUrp ? urpProp : legacyProp;
+        }
+
+        private static void SetColor(Material mat, Ctx ctx, string urpProp, string legacyProp, Color c, string hdrpProp = null)
+        {
+            string prop = Prop(ctx, urpProp, legacyProp, hdrpProp);
             if (mat.HasProperty(prop)) mat.SetColor(prop, c);
         }
 
-        private static void SetFloat(Material mat, Ctx ctx, string urpProp, string legacyProp, float v)
+        private static void SetFloat(Material mat, Ctx ctx, string urpProp, string legacyProp, float v, string hdrpProp = null)
         {
-            string prop = ctx.UsingUrp ? urpProp : legacyProp;
+            string prop = Prop(ctx, urpProp, legacyProp, hdrpProp);
             if (mat.HasProperty(prop)) mat.SetFloat(prop, v);
         }
 
-        private static void SetTexture(Material mat, Ctx ctx, string urpProp, string legacyProp, Texture2D tex)
+        private static void SetTexture(Material mat, Ctx ctx, string urpProp, string legacyProp, Texture2D tex, string hdrpProp = null)
         {
-            string prop = ctx.UsingUrp ? urpProp : legacyProp;
+            string prop = Prop(ctx, urpProp, legacyProp, hdrpProp);
             if (mat.HasProperty(prop)) mat.SetTexture(prop, tex);
+        }
+
+        private static RenderPipelineKind DetectPipeline()
+        {
+            var asset = GraphicsSettings.currentRenderPipeline;
+            if (asset == null) return RenderPipelineKind.BuiltIn;
+            string typeName = asset.GetType().FullName ?? "";
+            if (typeName.IndexOf("HDRenderPipelineAsset", StringComparison.Ordinal) >= 0 ||
+                typeName.IndexOf("HighDefinition", StringComparison.Ordinal) >= 0)
+                return RenderPipelineKind.HighDefinition;
+            return RenderPipelineKind.Universal; // URP, or a custom SRP that follows URP's shader names
+        }
+
+        // HDRP derives most material keywords from its properties in an editor-only
+        // validation step. Call it through reflection so this package never needs a hard
+        // dependency on the HDRP package.
+        private static void ResetHdrpKeywords(Material mat)
+        {
+            try
+            {
+                var type = Type.GetType("UnityEditor.Rendering.HighDefinition.HDShaderUtils, Unity.RenderPipelines.HighDefinition.Editor");
+                var method = type?.GetMethod("ResetMaterialKeywords", new[] { typeof(Material) });
+                method?.Invoke(null, new object[] { mat });
+            }
+            catch (Exception)
+            {
+                // Best effort: the material still renders with the properties set above.
+            }
         }
 
         private static byte[] GetImageBytes(Ctx ctx, int imageIndex)
