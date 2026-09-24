@@ -9,3 +9,6 @@ UserSettings/
 # Local scratch fixtures used for verifying the native importer against ground truth;
 # not part of the shipped package.
 _scratch_test/
+
+__pycache__/
+*.pyc
