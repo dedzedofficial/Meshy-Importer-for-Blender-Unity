@@ -123,9 +123,12 @@ def main():
         else:
             print("C#: skipped (dotnet not found)")
         if args.godot:
-            script = os.path.join(HERE, "hosts", "godot_uv_parity.gd")
-            out = subprocess.run([args.godot, "--headless", "--path", os.path.join(HERE, "hosts", "godot_project"),
-                                  "--script", script, "--", path], capture_output=True, text=True)
+            project = os.path.join(tmp, "godot_project")
+            shutil.copytree(os.path.join(HERE, "hosts", "godot_project"), project)
+            shutil.copytree(os.path.join(ROOT, "godot", "addons"), os.path.join(project, "addons"))
+            shutil.copy(os.path.join(HERE, "hosts", "godot_uv_parity.gd"), project)
+            out = subprocess.run([args.godot, "--headless", "--path", project, "--script", "res://godot_uv_parity.gd",
+                                  "--", path], capture_output=True, text=True)
             lines = [l for l in out.stdout.splitlines() if l.startswith("[")]
             if out.returncode != 0 or not lines:
                 print(out.stdout, out.stderr)
