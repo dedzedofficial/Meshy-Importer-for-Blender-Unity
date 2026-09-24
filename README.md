@@ -1,19 +1,33 @@
 # Meshy Importer for Blender & Unity
 
-**Version 1.4.0 (Unity) / 1.3.0 (Blender) — created and maintained by FISHHWB**
+**Version 1.4.1 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB**
 
 [![Validate repository](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml/badge.svg)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Import real Meshy `.meshy` model payloads into **Unity and Blender** with a local decoder. Unity users can drop `.meshy` files into `Assets` and let the Unity Asset Pipeline handle the source file automatically; Blender users can use **File > Import > Meshy Model (.meshy)**.
+Import real Meshy `.meshy` model payloads into **Unity, Blender, Godot and Unreal Engine** with a local decoder. Nothing is uploaded anywhere.
+
+| Host | Folder | How you import |
+|---|---|---|
+| Unity 2020.3+ | [`unity/`](unity/README.md) | Drop `.meshy` into `Assets/` |
+| Blender 3.6+ | [`blender/`](blender/README.md) | **File > Import > Meshy Model (.meshy)**, or drag and drop (4.1+) |
+| Godot 4.2+ | [`godot/`](godot/README.md) | Put `.meshy` in the project; it imports like any 3D scene |
+| Unreal 5.3+ | [`unreal/`](unreal/README.md) | **Tools > Meshy > Import .meshy Files...** |
+| Anything else | [`core/python`](#-command-line-converter) | `python -m meshy_core model.meshy`, then use the `.glb` |
 
 > **Important:** Meshy's normal Download workflow uses standard formats such as GLB, FBX, and OBJ. This importer is for the `.meshy` model payload obtained through the browser Network workflow. Do not rename a GLB to `.meshy`.
+
+### What every importer does
+
+- **Decrypts** the `.meshy` container locally.
+- **Decodes Meshy's compression** (`EXT_meshopt_compression` geometry, `KHR_mesh_quantization`, WebP textures) wherever the host's own glTF importer can't. Stock Blender, Godot and Unreal importers all reject current Meshy files without this step.
+- **Auto-repairs broken UVs** (on by default): NaN values, wild outliers and collapsed triangles are fixed from neighbouring UVs, and valid Meshy UVs are never changed. Meshes with no UVs get generated ones: Smart UV Project in Blender, box projection elsewhere.
 
 ## ⭐ Unity: drop in `.meshy` and go
 
 1. Install this package with Unity Package Manager.
 2. Drop a real `.meshy` file anywhere under `Assets/`.
-3. Unity registers `.meshy` as a custom Asset Pipeline type and builds the mesh, materials, textures, and skinning **directly -- no UnityGLTF or glTFast package required.**
-4. Select the `.meshy` asset to see status, size, **Reimport**, and **Validate** controls in the Inspector.
+3. Unity registers `.meshy` as a custom Asset Pipeline type and builds the mesh, materials, textures, and skinning **directly -- no UnityGLTF or glTFast package required.** Built-in, URP and HDRP are supported.
+4. Select the `.meshy` asset to see its **import settings** (scale factor, auto-repair UVs, colliders, mesh optimization), its status and analysis, and **Reimport** / **Validate** buttons in the Inspector.
 
 Unity's Scripted Importer system is specifically intended for custom file extensions and automatically invokes the importer when supported files are added or changed.
 
@@ -41,7 +55,7 @@ You can also clone/download the repository and add the `unity` folder as a local
 
 ### Unity dependency
 
-None, for the normal path -- the importer builds meshes, PBR materials/textures, and skinning natively. UnityGLTF is only installed automatically as a fallback when a specific payload uses a glTF extension the native builder doesn't implement yet (currently just `EXT_meshopt_compression`); its package ID is `org.khronos.unitygltf`.
+None. The importer natively builds meshes (including meshopt-compressed and quantized geometry), PBR materials, WebP textures and skinning. UnityGLTF is only used as a fallback, written as a `.glb` next to the file, when a payload needs a glTF extension the native builder doesn't implement. Its package ID is `org.khronos.unitygltf`.
 
 ## 🧩 How to get a `.meshy` file
 
@@ -65,29 +79,52 @@ Use the legacy **Preferences > Add-ons > Install...** workflow.
 
 Then use **File > Import > Meshy Model (.meshy)**.
 
-The Blender extension reconstructs the GLB locally and passes it to Blender's native glTF importer.
+The Blender extension reconstructs the GLB locally, decodes the meshopt geometry that Blender's own glTF importer rejects, and passes the result to Blender's native glTF importer. Import options: auto-repair UVs, remove unused material slots, save the decoded `.glb`.
+
+## 🎮 Godot
+
+Copy `godot/addons/meshy_importer` into your project and enable **Meshy Importer** under **Project Settings > Plugins**. `.meshy` files then import like any other 3D scene: reimport, Advanced Import Settings, instancing. See [`godot/README.md`](godot/README.md).
+
+## 🛠️ Unreal Engine
+
+Unzip `unreal/Meshy Importer for Unreal.zip` into your project's `Plugins/` folder and restart the editor. Use **Tools > Meshy > Import .meshy Files...**, or right-click a Content Browser folder and choose **Import .meshy Files Here...**. The plugin is Editor Python only, with no C++ build. See [`unreal/README.md`](unreal/README.md).
+
+## 🧪 Command-line converter
+
+The shared decoder (`core/python/meshy_core`) is plain Python 3.9+ with no dependencies:
+
+```text
+cd core/python
+python -m meshy_core path/to/model.meshy                 # writes model.glb (plain glTF 2.0)
+python -m meshy_core *.meshy -o out/                      # several files
+python -m meshy_core model.meshy --raw                    # decrypt only, keep Meshy's extensions
+```
+
+The converted `.glb` has no required extensions: meshopt decoded, attributes dequantized, texture transforms baked, WebP converted to PNG, and UVs repaired. It passes the Khronos glTF validator and imports into any glTF tool. Pillow is used for WebP when installed; otherwise a built-in decoder is used.
 
 ## Compatibility
 
 | Host | Supported | Recommended |
 |---|---|---|
-| Unity 2020.3 LTS | Yes | Use UnityGLTF 2.9.1-rc |
+| Unity 2020.3 LTS | Yes | Yes |
 | Unity 2021.3 LTS | Yes | Yes |
 | Unity 2022.3 LTS | Yes | Yes |
 | Unity 6+ | Yes | Yes |
 | Blender 3.6 LTS–4.1 | Yes | Legacy add-on workflow |
 | Blender 4.2+ | Yes | Extension workflow |
 | Blender 5.x | Yes | Yes |
+| Godot 4.2+ | Yes | Yes |
+| Unreal Engine 5.3+ | Yes | Yes |
 
 See **COMPATIBILITY.md** for details.
 
 ## 🧰 Repository development
 
-The repository includes GitHub Actions validation for JSON, Blender Python syntax, and Blender version metadata. See `CONTRIBUTING.md` before making changes.
+GitHub Actions runs the Python test-suite (Python 3.9 and 3.12), a Unity compile check against the real UnityEngine reference assemblies, a C#/GDScript/Python UV-repair parity check, and headless Blender and Godot imports of a synthetic `.meshy` payload. It also checks that versions agree across every host and that the committed ZIPs match their sources. See `CONTRIBUTING.md` before making changes.
 
 ## 🔒 Privacy
 
-The `.meshy` decoder operates locally. The importer does not upload model files to FISHHWB or a conversion server.
+The `.meshy` decoder operates locally in every host. The importers do not upload model files to FISHHWB or a conversion server.
 
 ## ❤️ Support
 
@@ -97,7 +134,7 @@ https://www.patreon.com/cw/DedZed
 
 ## 🔎 Find this project
 
-Useful search terms include **Meshy Importer**, **Meshy AI importer**, **.meshy Unity importer**, **.meshy Blender importer**, **Meshy to Unity**, **Meshy to Blender**, and **Meshy 3D model importer**. See **SEO_KEYWORDS.md**.
+Useful search terms include **Meshy Importer**, **Meshy AI importer**, **.meshy Unity importer**, **.meshy Blender importer**, **.meshy Godot importer**, **.meshy Unreal importer**, **Meshy to Unity**, **Meshy to Blender**, **Meshy to Godot**, **Meshy to Unreal**, and **Meshy 3D model importer**. See **SEO_KEYWORDS.md**.
 
 ## Troubleshooting
 
