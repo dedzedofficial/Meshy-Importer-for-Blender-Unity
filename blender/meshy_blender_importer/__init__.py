@@ -1,209 +1,203 @@
 bl_info = {
     "name": "Meshy Importer for Blender & Unity",
     "author": "FISHHWB",
-    "version": (1, 3, 0),
+    "version": (1, 4, 1),
     "blender": (3, 6, 0),
     "location": "File > Import > Meshy Model (.meshy)",
     "description": "Imports Meshy .meshy containers locally through Blender's native GLB importer.",
     "category": "Import-Export",
 }
 
-import bpy
 import os
-import struct
+import sys
 import tempfile
+
+import bpy
+from bpy.props import BoolProperty, CollectionProperty, StringProperty
+from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty
-from bpy.types import Operator
 
-# Meshy's current .meshy wrapper uses this fixed AES-256 key.
-_KEY = b'JSON{"accessors":[{"bufferView":'
-_MAGIC = b"MESHY.AI"
-_HEADER_SIZE = 32
-_ENCRYPTED_SIZE = 8192
-_TAG_SIZE = 16
-
-
-# ---- Small dependency-free AES-256 implementation -------------------------
-# Adapted from the AES specification; used only for AES-CTR decryption so the
-# add-on does not require pip packages inside Blender.
-
-_SBOX = [
-99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,118,
-202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,
-183,253,147,38,54,63,247,204,52,165,229,241,113,216,49,21,
-4,199,35,195,24,150,5,154,7,18,128,226,235,39,178,117,
-9,131,44,26,27,110,90,160,82,59,214,179,41,227,47,132,
-83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,
-208,239,170,251,67,77,51,133,69,249,2,127,80,60,159,168,
-81,163,64,143,146,157,56,245,188,182,218,33,16,255,243,210,
-205,12,19,236,95,151,68,23,196,167,126,61,100,93,25,
-115,96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,
-219,224,50,58,10,73,6,36,92,194,211,172,98,145,149,228,
-121,231,200,55,109,141,213,78,169,108,86,244,234,101,122,
-174,8,186,120,37,46,28,166,180,198,232,221,116,31,75,
-189,139,138,112,62,181,102,72,3,246,14,97,53,87,185,134,
-193,29,158,225,248,152,17,105,217,142,148,155,30,135,
-233,206,85,40,223,140,161,137,13,191,230,66,104,65,
-153,45,15,176,84,187,22
-]
-_RCON = [0,1,2,4,8,16,32,64,128,27,54,108,216,171,77]
-
-def _gmul(a, b):
-    r = 0
-    for _ in range(8):
-        if b & 1: r ^= a
-        a = ((a << 1) ^ 0x11B) if a & 0x80 else (a << 1)
-        b >>= 1
-    return r & 255
-
-# Return round keys as 16-byte chunks.
-def _round_keys(key):
-    nk, nb, nr = 8, 4, 14
-    words = [list(key[i:i+4]) for i in range(0, 32, 4)]
-    for i in range(nk, nb*(nr+1)):
-        t = words[i-1][:]
-        if i % nk == 0:
-            t = t[1:] + t[:1]
-            t = [_SBOX[x] for x in t]
-            t[0] ^= _RCON[i//nk]
-        elif i % nk == 4:
-            t = [_SBOX[x] for x in t]
-        words.append([words[i-nk][j] ^ t[j] for j in range(4)])
-    return [bytes(sum(words[4*r:4*r+4], [])) for r in range(nr+1)]
-
-def _aes_encrypt_block(block, rks):
-    # AES state is column-major: state[row + 4*column].
-    s = list(block)
-    s = [s[i] ^ rks[0][i] for i in range(16)]
-
-    def sub():
-        nonlocal s
-        s = [_SBOX[x] for x in s]
-
-    def shift():
-        nonlocal s
-        old = s[:]
-        for r in range(4):
-            for c in range(4):
-                s[r+4*c] = old[r+4*((c+r)%4)]
-
-    def mix():
-        nonlocal s
-        out = [0]*16
-        for c in range(4):
-            a = s[4*c:4*c+4]
-            out[4*c+0] = _gmul(a[0],2)^_gmul(a[1],3)^a[2]^a[3]
-            out[4*c+1] = a[0]^_gmul(a[1],2)^_gmul(a[2],3)^a[3]
-            out[4*c+2] = a[0]^a[1]^_gmul(a[2],2)^_gmul(a[3],3)
-            out[4*c+3] = _gmul(a[0],3)^a[1]^a[2]^_gmul(a[3],2)
-        s = [x & 255 for x in out]
-
-    for rnd in range(1, 15):
-        sub()
-        shift()
-        if rnd != 14: mix()
-        s = [s[i] ^ rks[rnd][i] for i in range(16)]
-    return bytes(s)
-
-def _aes_ctr(data, key, nonce):
-    rks = _round_keys(key)
-    # Meshy uses nonce || uint32be(2) as the initial counter block.
-    counter = bytearray(nonce + struct.pack(">I", 2))
-    out = bytearray(len(data))
-    for pos in range(0, len(data), 16):
-        ks = _aes_encrypt_block(bytes(counter), rks)
-        chunk = data[pos:pos+16]
-        out[pos:pos+len(chunk)] = bytes(a ^ b for a, b in zip(chunk, ks))
-        # Treat the counter as a big-endian 128-bit integer.
-        for i in range(15, -1, -1):
-            counter[i] = (counter[i] + 1) & 255
-            if counter[i]:
-                break
-    return bytes(out)
+try:
+    # The release ZIP bundles the shared decoder as a sub-package.
+    from .meshy_core.decode import decode_meshy_file
+    from .meshy_core.normalize import NormalizeOptions, normalize_glb
+    from .meshy_core.uv_repair import repair_uvs
+except ImportError:  # running straight from a repository checkout
+    _core = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "core", "python")
+    if os.path.isdir(_core) and _core not in sys.path:
+        sys.path.append(_core)
+    from meshy_core.decode import decode_meshy_file
+    from meshy_core.normalize import NormalizeOptions, normalize_glb
+    from meshy_core.uv_repair import repair_uvs
 
 
-def _decrypt_meshy(path):
-    with open(path, "rb") as f:
-        data = f.read()
+def _prepare_glb(path, save_decoded_glb):
+    """Decrypt a .meshy file and make it something Blender's glTF importer accepts.
 
-    if len(data) < 8240 or data[:8] != _MAGIC:
-        raise ValueError("Not a valid Meshy .meshy file: missing MESHY.AI header.")
-
-    nonce = data[10:22]
-    encrypted = data[32:32 + _ENCRYPTED_SIZE]
-    clear_tail = data[32 + _ENCRYPTED_SIZE + _TAG_SIZE:]
-
-    first = _aes_ctr(encrypted, _KEY, nonce)
-    glb = bytearray(first + clear_tail)
-
-    if glb[:4] != b"glTF":
-        raise ValueError(
-            "Meshy decryption produced an invalid GLB header. "
-            "The .meshy encryption format may have changed."
-        )
-
-    if len(glb) < 12:
-        raise ValueError("Decrypted GLB is unexpectedly short.")
-
-    # GLB header: magic (4), version (4), total length (4).
-    struct.pack_into("<I", glb, 8, len(glb))
-    return bytes(glb)
+    Blender's importer does not implement EXT_meshopt_compression (which Meshy
+    uses), so that is decoded here. WebP textures are only converted for Blender
+    versions whose importer predates EXT_texture_webp.
+    """
+    glb = decode_meshy_file(path)
+    glb, _report = normalize_glb(glb, NormalizeOptions.for_host(
+        "blender", webp_to_png=bpy.app.version < (4, 0, 0)))
+    if save_decoded_glb:
+        out = os.path.splitext(path)[0] + ".glb"
+        if os.path.exists(out):
+            raise FileExistsError("%s already exists; not overwriting it" % os.path.basename(out))
+        with open(out, "wb") as f:
+            f.write(glb)
+    return glb
 
 
-class IMPORT_OT_meshy(bpy.types.Operator, ImportHelper):
+class IMPORT_OT_meshy(Operator, ImportHelper):
+    """Import one or more Meshy .meshy model payloads"""
     bl_idname = "import_scene.meshy"
     bl_label = "Import Meshy Model"
-    bl_options = {'UNDO'}
+    bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
     filename_ext = ".meshy"
     filter_glob: StringProperty(default="*.meshy", options={'HIDDEN'})
+    files: CollectionProperty(type=OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
+    directory: StringProperty(subtype='DIR_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+
+    auto_repair_uvs: BoolProperty(
+        name="Auto-repair UVs",
+        description="Fix broken UVs (NaN, wild outliers, collapsed triangles) while leaving valid Meshy "
+                    "UVs untouched. Meshes without any UVs get a Smart UV Project",
+        default=True,
+    )
+    remove_unused_slots: BoolProperty(
+        name="Remove Unused Material Slots",
+        description="Drop material slots no face uses (the materials themselves are kept)",
+        default=True,
+    )
+    save_decoded_glb: BoolProperty(
+        name="Save Decoded .glb",
+        description="Also write the decoded model next to the .meshy file as a plain .glb",
+        default=False,
+    )
+
+    def invoke(self, context, event):
+        if self.directory and len(self.files):  # drag-and-drop through the FileHandler
+            return context.window_manager.invoke_props_dialog(self)
+        return ImportHelper.invoke(self, context, event)
+
+    def _paths(self):
+        if self.directory and len(self.files):
+            return [os.path.join(self.directory, f.name) for f in self.files if f.name]
+        return [self.filepath]
 
     def execute(self, context):
-        try:
-            glb = _decrypt_meshy(self.filepath)
-
-            fd, temp_path = tempfile.mkstemp(suffix=".glb", prefix="meshy_")
-            os.close(fd)
-            try:
-                with open(temp_path, "wb") as f:
-                    f.write(glb)
-
-                # Blender's native glTF importer handles GLB, including
-                # materials/textures and any supported mesh compression.
-                before_objects = set(bpy.data.objects)
-                result = bpy.ops.import_scene.gltf(filepath=temp_path)
-                if 'FINISHED' not in result:
-                    raise RuntimeError("Blender's GLB importer did not finish.")
-
-                # Finish the import with safe, non-destructive preparation. Existing Meshy
-                # UVs are always preserved; Smart UV Project is only used when an imported
-                # mesh has no UV layer at all. This keeps the normal Meshy atlas untouched
-                # while making incomplete/utility meshes immediately usable.
-                imported_objects = [obj for obj in bpy.data.objects if obj not in before_objects]
-                _prepare_imported_objects(imported_objects)
-            finally:
-                try:
-                    os.remove(temp_path)
-                except OSError:
-                    pass
-
-            self.report({'INFO'}, "Meshy model imported successfully.")
-            return {'FINISHED'}
-
-        except Exception as exc:
-            self.report({'ERROR'}, f"Meshy import failed: {exc}")
+        paths = [p for p in self._paths() if p.lower().endswith(".meshy")]
+        if not paths:
+            self.report({'ERROR'}, "No .meshy file selected.")
             return {'CANCELLED'}
 
+        imported_all = []
+        failures = []
+        for path in paths:
+            try:
+                imported_all.extend(self._import_one(context, path))
+            except Exception as exc:
+                failures.append("%s: %s" % (os.path.basename(path), exc))
 
-def _prepare_imported_objects(objects):
-    """Apply lightweight post-import cleanup without changing authored Meshy data."""
-    mesh_count = 0
-    material_count = 0
-    vertex_count = 0
-    polygon_count = 0
-    generated_uvs = 0
+        _select(context, imported_all)
+        if failures:
+            for msg in failures:
+                self.report({'ERROR'}, "Meshy import failed: " + msg)
+            if not imported_all:
+                return {'CANCELLED'}
+        self.report({'INFO'}, "Imported %d Meshy model(s)." % (len(paths) - len(failures)))
+        return {'FINISHED'}
+
+    def _import_one(self, context, path):
+        glb = _prepare_glb(path, self.save_decoded_glb)
+        fd, temp_path = tempfile.mkstemp(suffix=".glb", prefix="meshy_")
+        os.close(fd)
+        try:
+            with open(temp_path, "wb") as f:
+                f.write(glb)
+            before = set(bpy.data.objects)
+            result = bpy.ops.import_scene.gltf(filepath=temp_path)
+            if 'FINISHED' not in result:
+                raise RuntimeError("Blender's GLB importer did not finish.")
+            objects = [obj for obj in bpy.data.objects if obj not in before]
+            _prepare_imported_objects(context, objects, self.auto_repair_uvs, self.remove_unused_slots)
+            return objects
+        finally:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
+def _select(context, objects):
+    """Leave the imported objects selected with one active, like Blender's own importers."""
+    alive = [o for o in objects if o.name in bpy.data.objects]
+    if not alive:
+        return
+    for o in context.view_layer.objects:
+        o.select_set(False)
+    for o in alive:
+        try:
+            o.select_set(True)
+        except RuntimeError:
+            pass  # not in the active view layer
+    meshes = [o for o in alive if o.type == 'MESH']
+    context.view_layer.objects.active = meshes[0] if meshes else alive[0]
+
+
+def _repair_mesh_uvs(mesh):
+    """Run the shared UV repair on the active UV layer. Returns the stats dict."""
+    uv_layer = mesh.uv_layers.active or mesh.uv_layers[0]
+    mesh.calc_loop_triangles()
+    loop_count = len(mesh.loops)
+
+    vert_index = [0] * loop_count
+    mesh.loops.foreach_get("vertex_index", vert_index)
+    co = [0.0] * (len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", co)
+    flat_uv = [0.0] * (loop_count * 2)
+    uv_layer.data.foreach_get("uv", flat_uv)
+    tri_loops = [0] * (len(mesh.loop_triangles) * 3)
+    mesh.loop_triangles.foreach_get("loops", tri_loops)
+
+    # Treat every loop as a vertex: Blender stores UVs per face corner.
+    positions = [(co[3 * v], co[3 * v + 1], co[3 * v + 2]) for v in vert_index]
+    uvs = [(flat_uv[2 * i], flat_uv[2 * i + 1]) for i in range(loop_count)]
+    new_uvs, stats = repair_uvs(positions, uvs, tri_loops)
+    if new_uvs is not None and not stats["regenerated"]:
+        uv_layer.data.foreach_set("uv", [c for uv in new_uvs for c in uv])
+        mesh.update()
+    return stats
+
+
+def _smart_project(context, obj):
+    try:
+        with context.temp_override(active_object=obj, object=obj, selected_objects=[obj],
+                                   selected_editable_objects=[obj]):
+            context.view_layer.objects.active = obj
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.uv.smart_project(island_margin=0.02)
+            bpy.ops.object.mode_set(mode='OBJECT')
+        return True
+    except Exception:
+        if obj.mode != 'OBJECT':
+            try:
+                bpy.ops.object.mode_set(mode='OBJECT')
+            except Exception:
+                pass
+        return False
+
+
+def _prepare_imported_objects(context, objects, auto_repair_uvs=True, remove_unused_slots=True):
+    """Apply lightweight post-import cleanup without changing valid Meshy data."""
+    mesh_count = material_count = vertex_count = polygon_count = 0
+    generated_uvs = repaired_uv_meshes = 0
     skinned = 0
+    seen_meshes = set()
 
     for obj in objects:
         if obj.type == 'ARMATURE':
@@ -212,59 +206,47 @@ def _prepare_imported_objects(objects):
         if obj.type != 'MESH' or obj.data is None:
             continue
 
-        mesh_count += 1
         mesh = obj.data
-        mesh.update(calc_edges=False, calc_edges_loose=False)
+        mesh_count += 1
         vertex_count += len(mesh.vertices)
         polygon_count += len(mesh.polygons)
         material_count += len([slot for slot in obj.material_slots if slot.material])
 
-        # Meshy normally supplies UVs. Do not touch those UVs. Only generate a basic UV
-        # layout when the source genuinely has none, so the asset can still be textured.
-        if len(mesh.uv_layers) == 0 and len(mesh.polygons) > 0:
+        if auto_repair_uvs and mesh.name not in seen_meshes and len(mesh.polygons) > 0:
+            seen_meshes.add(mesh.name)
+            if len(mesh.uv_layers) == 0:
+                mesh.uv_layers.new(name="UVMap")
+                if _smart_project(context, obj):
+                    generated_uvs += 1
+                obj["FISHHWB_Meshy_UV_Regenerated"] = True
+            else:
+                stats = _repair_mesh_uvs(mesh)
+                if stats["regenerated"] and _smart_project(context, obj):
+                    generated_uvs += 1
+                elif stats["bad_vertices"]:
+                    repaired_uv_meshes += 1
+                obj["FISHHWB_Meshy_UV_BadCorners"] = stats["bad_vertices"]
+                obj["FISHHWB_Meshy_UV_RepairedCorners"] = stats["repaired_vertices"]
+                obj["FISHHWB_Meshy_UV_Regenerated"] = stats["regenerated"]
+
+        if remove_unused_slots and len(obj.material_slots) > 1:
             try:
-                bpy.ops.object.select_all(action='DESELECT')
-                obj.select_set(True)
-                bpy.context.view_layer.objects.active = obj
-                bpy.ops.object.mode_set(mode='EDIT')
-                bpy.ops.mesh.select_all(action='SELECT')
-                bpy.ops.uv.smart_project(island_margin=0.02)
-                bpy.ops.object.mode_set(mode='OBJECT')
-                generated_uvs += 1
+                with context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+                    bpy.ops.object.material_slot_remove_unused()
             except Exception:
-                if obj.mode != 'OBJECT':
-                    try: bpy.ops.object.mode_set(mode='OBJECT')
-                    except Exception: pass
+                pass
 
-        # Remove material slots that are not referenced by any polygon. This does not delete
-        # the material datablock and avoids changing the actual visible material assignments.
-        try:
-            bpy.ops.object.select_all(action='DESELECT')
-            obj.select_set(True)
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.material_slot_remove_unused()
-        except Exception:
-            pass
-
-        # Store useful diagnostics on the object for later inspection without creating extra
-        # files or slowing the importer with an external analysis pass.
         obj["FISHHWB_Meshy_VertexCount"] = len(mesh.vertices)
         obj["FISHHWB_Meshy_PolygonCount"] = len(mesh.polygons)
         obj["FISHHWB_Meshy_HasUV"] = len(mesh.uv_layers) > 0
 
-    # Put the selection back into a predictable state.
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in objects:
-        if obj.name in bpy.data.objects:
-            obj.select_set(False)
-
-    # Record a compact import summary on the scene for scripts/tools that want to inspect it.
-    scene = bpy.context.scene
+    scene = context.scene
     scene["FISHHWB_Meshy_LastImport_Meshes"] = mesh_count
     scene["FISHHWB_Meshy_LastImport_Materials"] = material_count
     scene["FISHHWB_Meshy_LastImport_Vertices"] = vertex_count
     scene["FISHHWB_Meshy_LastImport_Polygons"] = polygon_count
     scene["FISHHWB_Meshy_LastImport_GeneratedUVs"] = generated_uvs
+    scene["FISHHWB_Meshy_LastImport_RepairedUVMeshes"] = repaired_uv_meshes
     scene["FISHHWB_Meshy_LastImport_Rigged"] = skinned > 0
 
 
@@ -278,23 +260,39 @@ def menu_func_help(self, context):
     self.layout.operator("wm.meshy_docs", text="Meshy Importer Documentation")
 
 
-class WM_OT_meshy_support(bpy.types.Operator):
+class WM_OT_meshy_support(Operator):
     bl_idname = "wm.meshy_support"
     bl_label = "Meshy Importer Support"
+
     def execute(self, context):
         bpy.ops.wm.url_open(url="https://www.patreon.com/cw/DedZed")
         return {'FINISHED'}
 
 
-class WM_OT_meshy_docs(bpy.types.Operator):
+class WM_OT_meshy_docs(Operator):
     bl_idname = "wm.meshy_docs"
     bl_label = "Meshy Importer Documentation"
+
     def execute(self, context):
         bpy.ops.wm.url_open(url="https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity")
         return {'FINISHED'}
 
 
-classes = (IMPORT_OT_meshy, WM_OT_meshy_support, WM_OT_meshy_docs)
+classes = [IMPORT_OT_meshy, WM_OT_meshy_support, WM_OT_meshy_docs]
+
+if hasattr(bpy.types, "FileHandler"):  # Blender 4.1+: drag .meshy files into the viewport
+    class IO_FH_meshy(bpy.types.FileHandler):
+        bl_idname = "IO_FH_meshy"
+        bl_label = "Meshy Model"
+        bl_import_operator = "import_scene.meshy"
+        bl_file_extensions = ".meshy"
+
+        @classmethod
+        def poll_drop(cls, context):
+            return context.area is not None and context.area.type in {'VIEW_3D', 'OUTLINER'}
+
+    classes.append(IO_FH_meshy)
+
 
 def register():
     for cls in classes:
@@ -302,11 +300,13 @@ def register():
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_help.append(menu_func_help)
 
+
 def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_help.remove(menu_func_help)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+
 
 if __name__ == "__main__":
     register()
