@@ -1,0 +1,9 @@
+; Minimal project used by tests/cross_check_uv.py and tests/hosts/godot_smoke.py.
+; The test harness copies godot/addons into it before running.
+config_version=5
+
+[application]
+config/name="Meshy Importer Tests"
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/meshy_importer/plugin.cfg")

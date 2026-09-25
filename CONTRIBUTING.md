@@ -21,6 +21,32 @@ For Unity changes:
 For Blender changes:
 - Keep the add-on dependency-free where practical.
 - Preserve existing Meshy UVs and authored material data unless a change explicitly requires otherwise.
-- Keep `bl_info` and `blender_manifest.toml` versions synchronized.
+- Keep `bl_info` and `blender_manifest.toml` versions synchronized (all hosts share one version; see `tools/check_versions.py`).
+- The add-on must keep working on Blender 3.6 (legacy add-on) and 4.2+ (extension).
+
+For Godot changes:
+- Target Godot 4.2+. Keep scripts `@tool` and statically typed where GDScript's inference needs it.
+- `python tests/hosts/godot_smoke.py <godot>` must pass.
+
+For Unreal changes:
+- Keep the plugin Editor-Python only and Python 3.9 compatible (Unreal 5.3 ships Python 3.9).
+- `tests/test_unreal_plugin.py` drives it against a stub `unreal` module. Test real imports in the editor.
+
+Shared code:
+- `core/python/meshy_core` is the reference implementation of decoding, meshopt, WebP and UV repair. Unity (C#) and Godot (GDScript) carry ports of it; change them together.
+- The Blender and Unreal ZIPs bundle `meshy_core`. Rebuild them with `python tools/build_zips.py`; never edit a ZIP by hand.
+- Never commit real Meshy payloads. `tests/meshy_fixtures.py` builds synthetic ones.
+
+## Running the checks locally
+
+```text
+python -m unittest discover -s tests          # Python core + Unreal plugin (pip install pillow for the WebP comparison tests)
+python tools/check_versions.py                # versions agree everywhere
+python tools/build_zips.py --check            # committed ZIPs are current
+dotnet build tests/csharp/unity-compile       # Unity package type-checks against UnityEngine
+python tests/cross_check_uv.py                # C# / GDScript UV repair match the Python reference (needs dotnet / godot)
+blender -b --factory-startup --python tests/hosts/blender_smoke.py -- blender <file.meshy>
+python tests/hosts/godot_smoke.py <path-to-godot>
+```
 
 Please update `CHANGELOG.md` for user-visible changes.

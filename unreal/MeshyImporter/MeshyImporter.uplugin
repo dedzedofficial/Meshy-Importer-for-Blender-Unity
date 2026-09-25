@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 141,
+	"VersionName": "1.4.1",
+	"FriendlyName": "Meshy Importer",
+	"Description": "Import Meshy .meshy model payloads: decrypts locally, decodes meshopt geometry and WebP textures, repairs broken UVs, then imports through Unreal's glTF (Interchange) pipeline.",
+	"Category": "Importers",
+	"CreatedBy": "FISHHWB",
+	"CreatedByURL": "https://github.com/dedzedofficial",
+	"DocsURL": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/tree/main/unreal",
+	"SupportURL": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/issues",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Plugins": [
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		}
+	]
+}

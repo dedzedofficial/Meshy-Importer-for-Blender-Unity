@@ -5,40 +5,151 @@ on:
   pull_request:
 
 jobs:
-  validate:
+  repository:
+    name: Metadata, versions and ZIPs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Validate JSON
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          for p in Path('.').rglob('*.json'):
-              if any(part in {'.git', '_scratch_test'} for part in p.parts):
-                  continue
-              json.loads(p.read_text(encoding='utf-8'))
-              print('OK', p)
+          for pattern in ('*.json', '*.uplugin'):
+              for p in Path('.').rglob(pattern):
+                  if any(part in {'.git', '_scratch_test', 'bin', 'obj'} for part in p.parts):
+                      continue
+                  json.loads(p.read_text(encoding='utf-8'))
+                  print('OK', p)
           PY
 
-      - name: Validate Blender Python
-        run: python -m compileall -q blender/meshy_blender_importer
+      - name: Compile Python (all hosts)
+        run: python -m compileall -q core/python blender/meshy_blender_importer unreal tests tools
 
-      - name: Check Blender versions match
+      - name: Python 3.9 syntax (Unreal 5.3 ships Python 3.9)
         run: |
           python - <<'PY'
-          import ast
-          from pathlib import Path
-          import re
-          init = Path('blender/meshy_blender_importer/__init__.py').read_text(encoding='utf-8')
-          m = re.search(r'"version"\s*:\s*\((\d+),\s*(\d+),\s*(\d+)\)', init)
-          assert m, 'bl_info version not found'
-          pyver = '.'.join(m.groups())
-          manifest = Path('blender/meshy_blender_importer/blender_manifest.toml').read_text(encoding='utf-8')
-          mm = re.search(r'^version\s*=\s*"([^"]+)"', manifest, re.M)
-          assert mm, 'manifest version not found'
-          assert pyver == mm.group(1), f'Version mismatch: {pyver} vs {mm.group(1)}'
-          print('Blender version:', pyver)
+          import ast, pathlib
+          for root in ('core/python', 'unreal', 'blender/meshy_blender_importer'):
+              for p in pathlib.Path(root).rglob('*.py'):
+                  ast.parse(p.read_text(encoding='utf-8'), filename=str(p), feature_version=(3, 9))
+          print('OK')
           PY
+
+      - name: Versions agree across every host
+        run: python tools/check_versions.py
+
+      - name: Committed ZIPs match their sources
+        run: python tools/build_zips.py --check
+
+  python-tests:
+    name: Python tests (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Pillow (reference decoder for the WebP comparison tests)
+        run: python -m pip install pillow
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+  unity:
+    name: Unity compile check + C# UV parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Type-check the Unity package against UnityEngine reference assemblies
+        run: dotnet build tests/csharp/unity-compile -nologo
+      - name: C# UV repair matches the Python reference
+        run: python tests/cross_check_uv.py --dotnet dotnet
+
+  blender:
+    name: Headless Blender import (${{ matrix.blender }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - blender: "4.2.9"
+            series: "4.2"
+          - blender: "3.6.19"
+            series: "3.6"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache Blender
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/blender
+          key: blender-${{ matrix.blender }}
+      - name: Download Blender
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/blender
+          curl -sSL "https://download.blender.org/release/Blender${{ matrix.series }}/blender-${{ matrix.blender }}-linux-x64.tar.xz" \
+            | tar -xJ -C ~/blender --strip-components=1
+      - name: System libraries
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxi6 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1 >/dev/null
+      - name: Build fixtures and unpack the release ZIP
+        run: |
+          python tests/meshy_fixtures.py "$RUNNER_TEMP/clean.meshy"
+          python tests/meshy_fixtures.py "$RUNNER_TEMP/broken.meshy" --broken-uvs
+          mkdir -p "$RUNNER_TEMP/addon"
+          unzip -q "blender/Meshy Importer for Blender & Unity - Blender.zip" -d "$RUNNER_TEMP/addon"
+      - name: Import through the add-on
+        run: |
+          ~/blender/blender -b --factory-startup --python tests/hosts/blender_smoke.py -- \
+            "$RUNNER_TEMP/addon" "$RUNNER_TEMP/clean.meshy" "$RUNNER_TEMP/broken.meshy"
+      - name: Extension manifest validates
+        if: matrix.series != '3.6'
+        run: ~/blender/blender -b --factory-startup --command extension validate "blender/Meshy Importer for Blender & Unity - Blender.zip"
+
+  godot:
+    name: Headless Godot import (${{ matrix.godot }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        godot: ["4.2.2", "4.3"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache Godot
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ matrix.godot }}
+      - name: Download Godot
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${{ matrix.godot }}-stable/Godot_v${{ matrix.godot }}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip && mv Godot_v* godot && chmod +x godot
+      - name: Import synthetic .meshy files through the plugin
+        run: python tests/hosts/godot_smoke.py ~/godot/godot
+      - name: GDScript UV repair matches the Python reference
+        run: python tests/cross_check_uv.py --godot ~/godot/godot --dotnet ""

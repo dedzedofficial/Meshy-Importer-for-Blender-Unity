@@ -21,8 +21,15 @@ Meshy Importer for Blender & Unity
 - Meshy GLB importer
 - Meshy asset pipeline
 - Meshy custom Unity asset importer
+- .meshy Godot importer
+- .meshy Unreal Engine importer
+- Meshy to Godot
+- Meshy to Unreal
+- import Meshy models into Godot
+- import Meshy models into Unreal Engine
+- Meshy to GLB converter
 
 ## Suggested repository topics
-`meshy`, `meshy-ai`, `meshy-importer`, `meshy-file`, `meshy-unity`, `meshy-blender`, `unity`, `blender`, `3d-model-importer`, `glb`, `gltf`, `game-development`, `3d-assets`
+`meshy`, `meshy-ai`, `meshy-importer`, `meshy-file`, `meshy-unity`, `meshy-blender`, `meshy-godot`, `meshy-unreal`, `unity`, `blender`, `godot`, `unreal-engine`, `3d-model-importer`, `glb`, `gltf`, `game-development`, `3d-assets`
 
 Use natural wording. Avoid repeating keywords unnaturally or making claims that imply Meshy officially publishes the `.meshy` format.

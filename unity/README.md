@@ -1,4 +1,4 @@
-# Meshy Importer for Unity — v1.4.0
+# Meshy Importer for Unity — v1.4.1
 
 ## What it does
 
@@ -9,7 +9,25 @@ Drop a real Meshy `.meshy` payload into your Unity project's `Assets` folder. Th
 1. Install this package from Unity Package Manager.
 2. Drop `model.meshy` into `Assets/`. That's it.
 
-Meshy's real-world exports use `EXT_meshopt_compression` for geometry and `EXT_texture_webp` for textures -- both are decoded natively (from-scratch decoders verified byte-exact against the reference implementations), so this covers real `.meshy` files end-to-end. If a payload ever uses some other glTF extension the native builder doesn't implement, the importer automatically falls back to writing a `.glb` companion and importing it with whatever glTF package is installed -- run **Tools → Meshy → Install UnityGLTF (Optional Fallback)** only if you hit that case.
+Meshy's real-world exports use `EXT_meshopt_compression` for geometry and `EXT_texture_webp` for textures -- both are decoded natively (from-scratch decoders verified byte-exact against the reference implementations), so this covers real `.meshy` files end-to-end. If a payload ever uses some other glTF extension the native builder doesn't implement, the importer automatically falls back to writing a `.glb` companion and importing it with whatever glTF package is installed -- run **Tools → Meshy → Install UnityGLTF (Optional Fallback)** only if you hit that case. The importer only ever deletes a `.glb` it wrote itself; your own `.glb` files, and ones made with **Convert**, are left alone.
+
+### Import settings
+
+Select a `.meshy` asset to see its settings in the Inspector. Click **Apply** to reimport with them.
+
+- **Scale Factor**: a uniform scale on the imported model's root.
+- **Auto-repair UVs** (on): fixes broken UVs (NaN values, wild outliers, collapsed triangles) without changing valid Meshy UVs. Meshes with no UVs get a box projection. The Inspector shows how many UVs were repaired.
+- **Generate Colliders** (off): adds a `MeshCollider` to every static mesh.
+- **Optimize Meshes** (on): reorders vertex/index data for GPU cache efficiency. The mesh looks the same either way.
+
+Meshes over 65,535 vertices use 32-bit indices automatically.
+
+### Render pipelines
+
+Materials are built for the pipeline the project uses:
+- **Built-in:** `Standard`.
+- **URP:** `Universal Render Pipeline/Lit`.
+- **HDRP:** `HDRP/Lit`, with base colour, normal and emission maps. Metallic/roughness and occlusion are not packed into an HDRP mask map yet; the Inspector notes this.
 
 ## Getting the `.meshy` payload
 
@@ -36,9 +54,6 @@ GitHub: https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity
 
 ## Unity compatibility
 
-- Unity 2020.3 LTS: supported with UnityGLTF 2.9.1-rc
-- Unity 2021.3 LTS: supported with UnityGLTF 2.21.0
-- Unity 2022.3 LTS: supported with UnityGLTF 2.21.0
-- Unity 6+: supported with UnityGLTF 2.21.0
+Unity 2020.3 LTS, 2021.3 LTS, 2022.3 LTS and Unity 6+ are supported by the native importer with no other packages. The optional UnityGLTF fallback uses 2.9.1-rc on 2020.3 and 2.21.0 on newer versions.
 
 For the best supported path, use a current Unity LTS release. See `../COMPATIBILITY.md` for details.

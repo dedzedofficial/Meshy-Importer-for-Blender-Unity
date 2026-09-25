@@ -11,7 +11,27 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FirstRunKey = "FISHHWB.MeshyImporter.FirstRunShown.1.4.0";
+        private const string FallbackVersion = "1.4.1";
+
+        /// <summary>The installed package version, read from package.json so it never drifts.</summary>
+        public static string Version
+        {
+            get
+            {
+                try
+                {
+                    var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshyImporterMenu).Assembly);
+                    if (info != null && !string.IsNullOrEmpty(info.version)) return info.version;
+                }
+                catch (Exception)
+                {
+                    // Package Manager not available in this context.
+                }
+                return FallbackVersion;
+            }
+        }
+
+        private static string FirstRunKey => "FISHHWB.MeshyImporter.FirstRunShown." + Version;
 
         [InitializeOnLoadMethod]
         private static void FirstRun()
@@ -110,7 +130,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
             bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            string message = "Meshy Importer 1.4.0: OK\n" +
+            string message = "Meshy Importer " + Version + ": OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
                 "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +
@@ -270,15 +290,9 @@ namespace FISHHWB.MeshyImporter.Editor
                 "OK");
         }
 
-        private static string ProjectPath(string assetPath)
-        {
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-            return Path.Combine(projectRoot, assetPath.Replace('\\', Path.DirectorySeparatorChar));
-        }
-
         public static byte[] DecodeFileForEditor(string path)
         {
-            string fullPath = path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ? ProjectPath(path) : path;
+            string fullPath = path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ? MeshyPaths.ProjectPath(path) : path;
             byte[] data = File.ReadAllBytes(fullPath);
             if (data.Length < 32 + 8192 + 16)
                 throw new InvalidDataException("The .meshy file is too small.");

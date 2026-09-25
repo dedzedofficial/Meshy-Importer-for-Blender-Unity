@@ -1,12 +1,12 @@
 # Meshy Importer for Blender & Unity — Blender
 
-**Version 1.3.0**
+**Version 1.4.1**
 
 This Blender extension adds:
 
 **File → Import → Meshy Model (.meshy)**
 
-It reads the Meshy `.meshy` container locally, decrypts the encrypted GLB prefix, reconstructs the GLB, fixes the GLB total-length field, and hands the result to Blender's native glTF importer.
+It reads the Meshy `.meshy` container locally, decrypts the encrypted GLB prefix, reconstructs the GLB, fixes the GLB total-length field, decodes Meshy's `EXT_meshopt_compression` geometry (which Blender's own glTF importer rejects), and hands the result to Blender's native glTF importer.
 
 ## Install
 
@@ -26,12 +26,21 @@ The add-on code retains `bl_info` for legacy installation. Use Blender's normal 
 
 **File → Import → Meshy Model (.meshy)**
 
-Select a `.meshy` file. The add-on decrypts it locally, creates a temporary GLB, imports it with Blender's native glTF importer, then removes the temporary file.
+Select one or more `.meshy` files. On Blender 4.1+ you can also drag `.meshy` files straight into the 3D Viewport or Outliner.
+
+The add-on decrypts each file locally, creates a temporary GLB, imports it with Blender's native glTF importer, then removes the temporary file. The imported objects stay selected.
+
+### Import options (file browser side panel)
+
+- **Auto-repair UVs** (on): fixes broken UVs (NaN values, wild outliers, collapsed triangles) and leaves valid Meshy UVs alone. A mesh with no UVs, or mostly broken ones, gets a Smart UV Project. Results are stored on each object as `FISHHWB_Meshy_UV_*` custom properties.
+- **Remove Unused Material Slots** (on): drops slots no face uses. The materials themselves are kept.
+- **Save Decoded .glb** (off): also writes `<name>.glb` next to the `.meshy` file. An existing file is never overwritten.
 
 ## Compatibility
 
-- Blender 4.2+.
-- Blender 5.2+ is recommended for Meshy files that use `EXT_meshopt_compression`.
+- Blender 4.2+ as an extension; Blender 3.6–4.1 as a legacy add-on.
+- `EXT_meshopt_compression` is decoded by the add-on, so any supported Blender version can import current Meshy files.
+- Blender versions before 4.0 get WebP textures converted to PNG automatically.
 
 ## Security / privacy
 

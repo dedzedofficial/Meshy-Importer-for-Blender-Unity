@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "meshy_importer_for_blender_unity"
-version = "1.3.0"
+version = "1.4.1"
 name = "Meshy Importer for Blender & Unity"
 tagline = "Import Meshy .meshy model files directly into Blender"
 maintainer = "FISHHWB"
@@ -9,3 +9,6 @@ blender_version_min = "4.2.0"
 website = "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity"
 tags = ["Import-Export"]
 license = ["SPDX:MIT"]
+
+[permissions]
+files = "Import .meshy files from disk"

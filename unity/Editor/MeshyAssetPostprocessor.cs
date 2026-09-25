@@ -1,41 +1,29 @@
-using System;
-using System.IO;
 using UnityEditor;
-using UnityEngine;
 
 namespace FISHHWB.MeshyImporter.Editor
 {
     /// <summary>
     /// The native importer (MeshyScriptedImporter) builds everything a .meshy file
-    /// needs directly inside OnImportAsset, so this postprocessor no longer needs to
-    /// generate or queue a .glb sidecar on import. It still cleans up a stale generated
-    /// .glb (from the fallback path, or from before this version) when its source
-    /// .meshy is deleted or moved, so old sidecars don't linger in the project.
+    /// needs directly inside OnImportAsset. This postprocessor only tidies up a .glb the
+    /// importer itself generated on the fallback path once its source .meshy is deleted
+    /// or moved. Files the importer did not write -- a user's own GLB, or one made with
+    /// Tools > Meshy > Convert -- are never touched (see MeshyGeneratedGlbRegistry).
     /// </summary>
     public sealed class MeshyAssetPostprocessor : AssetPostprocessor
     {
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            foreach (var asset in deletedAssets) DeleteOldGeneratedGlb(asset);
-            for (int i = 0; i < movedFromAssetPaths.Length; i++) DeleteOldGeneratedGlb(movedFromAssetPaths[i]);
+            foreach (var asset in deletedAssets) DeleteGeneratedGlb(asset);
+            foreach (var asset in movedFromAssetPaths) DeleteGeneratedGlb(asset);
         }
 
-        private static void DeleteOldGeneratedGlb(string assetPath)
+        private static void DeleteGeneratedGlb(string assetPath)
         {
-            if (string.IsNullOrEmpty(assetPath) || !assetPath.EndsWith(".meshy", StringComparison.OrdinalIgnoreCase)) return;
-            string glb = Path.ChangeExtension(assetPath, ".glb");
-            string full = ProjectPath(glb);
-            if (File.Exists(full))
-            {
-                try { File.Delete(full); Debug.Log("Meshy Importer: removed generated GLB " + glb); }
-                catch (Exception ex) { Debug.LogWarning("Meshy Importer: could not remove generated GLB: " + ex.Message); }
-            }
-        }
-
-        private static string ProjectPath(string assetPath)
-        {
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-            return Path.Combine(projectRoot, assetPath.Replace('\\', Path.DirectorySeparatorChar));
+            if (string.IsNullOrEmpty(assetPath) || !assetPath.EndsWith(".meshy", System.StringComparison.OrdinalIgnoreCase)) return;
+            string stem = assetPath.Substring(0, assetPath.Length - ".meshy".Length);
+            foreach (var glb in new[] { stem + ".glb", stem + "_meshy.glb" })
+                if (MeshyGeneratedGlbRegistry.DeleteIfGenerated(glb))
+                    UnityEngine.Debug.Log("Meshy Importer: removed generated GLB " + glb);
         }
     }
 }

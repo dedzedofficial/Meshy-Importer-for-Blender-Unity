@@ -1,29 +1,37 @@
 {
   "name": "Meshy Importer for Blender & Unity",
   "created_by": "FISHHWB",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "repository": "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity",
   "patreon": "https://www.patreon.com/cw/DedZed",
   "keywords": [
     ".meshy",
     ".meshy Blender importer",
+    ".meshy Godot importer",
     ".meshy Unity importer",
+    ".meshy Unreal importer",
     "3D assets",
     "3D model importer",
     "Blender",
     "Blender add-on",
     "Blender extension",
+    "custom Unity Asset Pipeline importer",
+    "game development",
     "GLB",
     "GLTF",
+    "Godot",
+    "Godot plugin",
     "Meshy",
     "Meshy AI",
     "Meshy model importer",
     "Meshy to Blender",
+    "Meshy to Godot",
     "Meshy to Unity",
+    "Meshy to Unreal",
     "Unity",
     "Unity ScriptedImporter",
-    "custom Unity Asset Pipeline importer",
-    "game development"
+    "Unreal Engine",
+    "Unreal Engine plugin"
   ],
   "unity": {
     "package_name": "com.fishhwb.meshy-importer",
@@ -34,5 +42,17 @@
   "support": {
     "patreon": "https://www.patreon.com/cw/DedZed",
     "discord": "https://discord.gg/vCcsnX4HQP"
+  },
+  "godot": {
+    "addon_path": "godot/addons/meshy_importer",
+    "min_version": "4.2"
+  },
+  "unreal": {
+    "plugin_zip": "unreal/Meshy Importer for Unreal.zip",
+    "min_version": "5.3"
+  },
+  "blender": {
+    "zip": "blender/Meshy Importer for Blender & Unity - Blender.zip",
+    "min_version": "3.6"
   }
 }

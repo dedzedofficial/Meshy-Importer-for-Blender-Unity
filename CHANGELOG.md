@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.4.1 — one version for every host, UV auto-repair, Godot and Unreal
+
+All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1.3.0.
+
+### New: Godot 4.2+ plugin (`godot/addons/meshy_importer`)
+- `.meshy` files import like any 3D scene: reimport, Advanced Import Settings and instancing all work.
+- Decrypts with Godot's `AESContext`, decodes `EXT_meshopt_compression` and converts `KHR_mesh_quantization` data to floats. Godot's glTF importer supports neither, so it would reject every current Meshy file.
+- Import options: auto-repair UVs, save decoded `.glb`.
+
+### New: Unreal Engine 5.3+ plugin (`unreal/Meshy Importer for Unreal.zip`)
+- Editor-Python plugin with no C++ build. Adds **Tools > Meshy > Import .meshy Files...**, a Content Browser folder entry, an inbox folder and diagnostics.
+- Converts each payload to plain glTF (meshopt, dequantize, texture-transform bake, WebP → PNG, UV repair) and imports it through Unreal's glTF/Interchange pipeline.
+
+### New: shared decoder and command-line converter (`core/python/meshy_core`)
+- Dependency-free Python 3.9+ package used by Blender and Unreal. Run `python -m meshy_core model.meshy` to get a validator-clean `.glb`.
+- Tested against meshoptimizer's own test vectors, the FIPS-197 AES vector, byte-exact WebP decoding compared with libwebp, and a synthetic Meshy-like payload.
+
+### New: smart UV auto-repair (every host, on by default)
+- Detects NaN/infinite UVs, wild outliers and collapsed triangles, and repairs only those vertices from neighbouring UVs. Valid Meshy UVs are never changed.
+- Meshes with no UVs, or mostly broken ones, get new UVs: Smart UV Project in Blender, box projection elsewhere.
+- Python, C# and GDScript implement the same algorithm; CI checks that they agree.
+
+### Blender
+- **Fixed:** current Meshy files did not import at all on stock Blender. Blender's glTF importer rejects `EXT_meshopt_compression` ("Extension EXT_meshopt_compression is not available"); the add-on now decodes it first.
+- Import several files at once. Drag-and-drop into the viewport or Outliner works on Blender 4.1+.
+- New options: auto-repair UVs, remove unused material slots, save decoded `.glb`.
+- Imported objects stay selected, with one active, instead of everything being deselected.
+- The extension manifest declares the `files` permission.
+
+### Unity
+- **Fixed:** meshes over 65,535 vertices were corrupted, because 16-bit indices wrapped around. 32-bit indices are now used when needed.
+- **Fixed (data loss):** a `.glb` sitting next to a `.meshy` with the same name was deleted on every import, move or delete of the `.meshy`, even when it was your own file or one made with **Convert**. The importer now only deletes a `.glb` it wrote itself; these are tracked by path, size and SHA-256. The fallback path no longer overwrites your `.glb` either.
+- **Fixed:** HDRP projects were detected as URP and got the built-in `Standard` shader, which renders pink. HDRP now gets `HDRP/Lit` materials.
+- New import settings in the Inspector: Scale Factor, Auto-repair UVs, Generate Colliders, Optimize Meshes.
+- The Inspector shows UV-repair results and the render pipeline in use.
+- The version is read from `package.json`, so dialogs no longer show a stale hard-coded version.
+- ScriptedImporter version bumped to 6, so existing `.meshy` assets reimport automatically.
+
+### Repository
+- CI runs the Python tests on 3.9 and 3.12, a Unity compile check against the UnityEngine reference assemblies, the UV-repair parity check, and headless Blender 4.2 and Godot 4.3 imports.
+- CI also checks version consistency across every host and that the committed ZIPs match their sources.
+- `tools/build_zips.py` builds the Blender and Unreal ZIPs deterministically.
+
 ## Repository release readiness
 
 - Added MIT `LICENSE` matching the Blender extension manifest.
