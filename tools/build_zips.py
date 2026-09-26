@@ -1,7 +1,13 @@
 """Build the ready-to-install ZIPs deterministically.
 
-    python tools/build_zips.py            # write every ZIP
-    python tools/build_zips.py --check    # fail if a committed ZIP is stale
+    python tools/build_zips.py                  # write every committed ZIP
+    python tools/build_zips.py --check          # fail if a committed ZIP is stale
+    python tools/build_zips.py --release dist   # write the release assets into dist/ (only)
+
+Release assets (stable names, linked from the README via releases/latest/download/):
+  Meshy-Importer-Blender.zip   same content as the committed Blender ZIP
+  Meshy-Importer-Unreal.zip    same content as the committed Unreal ZIP
+  Meshy-Importer-Godot.zip     addons/meshy_importer/... (unzip into a Godot project)
 
 Both ZIPs bundle the shared core/python/meshy_core package:
   blender/Meshy Importer for Blender & Unity - Blender.zip
@@ -43,6 +49,10 @@ def _core(arc_prefix):
             for name in sorted(os.listdir(CORE)) if name.endswith(".py")]
 
 
+def _godot():
+    return _tree(os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
+
+
 PACKAGES = {
     os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip"): lambda: (
         _tree(os.path.join(ROOT, "blender", "meshy_blender_importer"), "meshy_blender_importer/")
@@ -68,10 +78,26 @@ def build(entries):
     return buf.getvalue()
 
 
+RELEASE_ASSETS = {
+    "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
+    "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
+    "Meshy-Importer-Godot.zip": _godot,
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="verify the committed ZIPs are up to date")
+    ap.add_argument("--release", metavar="DIR", help="write the release assets into DIR instead")
     args = ap.parse_args()
+    if args.release:
+        os.makedirs(args.release, exist_ok=True)
+        for name, collect in RELEASE_ASSETS.items():
+            entries = collect()
+            with open(os.path.join(args.release, name), "wb") as f:
+                f.write(build(entries))
+            print("wrote %s (%d files)" % (os.path.join(args.release, name), len(entries)))
+        return 0
     stale = 0
     for out, collect in PACKAGES.items():
         entries = collect()

@@ -157,6 +157,23 @@ def build_meshy(broken_uvs=False, with_texture=True, nonce=b"\x07" * 12):
     return encode_meshy_bytes(build_glb(broken_uvs, with_texture), nonce)
 
 
+# (bytes, phrase the message must contain) for the "wrong file" diagnosis; shared by
+# test_decode.py and cross_check_wrong_file.py (C# and GDScript ports).
+WRONG_FILE_CASES = [
+    (b"", "empty"),
+    (b"MESHY.AI" + b"\x00" * 100, "cut off"),
+    (b"\n  <!DOCTYPE html><html><body>Meshy</body></html>", "web page"),
+    (b'{"result": {"model_urls": {}}}', "JSON"),
+    (b"Kaydara FBX Binary  \x00\x1a\x00", "FBX"),
+    (b"; FBX 7.4.0 project file", "FBX"),
+    (b"# Blender OBJ\nmtllib model.mtl\nv 0 0 0\n", "OBJ"),
+    (b"PK\x03\x04" + b"\x00" * 40, "ZIP"),
+    (b"\x89PNG\r\n\x1a\n" + b"\x00" * 40, "image"),
+    (b"RIFF\x00\x00\x00\x00WEBPVP8 ", "image"),
+    (b"\x00\x01\x02garbage" * 10, "does not start with MESHY.AI"),
+]
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
@@ -164,3 +181,4 @@ if __name__ == "__main__":
     with open(sys.argv[1], "wb") as f:
         f.write(build_meshy(broken_uvs="--broken-uvs" in sys.argv))
     print("wrote", sys.argv[1])
+

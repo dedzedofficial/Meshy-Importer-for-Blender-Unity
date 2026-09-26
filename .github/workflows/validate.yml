@@ -48,6 +48,9 @@ jobs:
       - name: Committed ZIPs match their sources
         run: python tools/build_zips.py --check
 
+      - name: Release assets build
+        run: python tools/build_zips.py --release "$RUNNER_TEMP/dist"
+
   python-tests:
     name: Python tests (${{ matrix.python }})
     runs-on: ubuntu-latest
@@ -80,6 +83,8 @@ jobs:
         run: dotnet build tests/csharp/unity-compile -nologo
       - name: C# UV repair matches the Python reference
         run: python tests/cross_check_uv.py --dotnet dotnet
+      - name: C# wrong-file messages match the Python reference
+        run: python tests/cross_check_wrong_file.py --dotnet dotnet --godot ""
 
   blender:
     name: Headless Blender import (${{ matrix.blender }})
@@ -153,3 +158,5 @@ jobs:
         run: python tests/hosts/godot_smoke.py ~/godot/godot
       - name: GDScript UV repair matches the Python reference
         run: python tests/cross_check_uv.py --godot ~/godot/godot --dotnet ""
+      - name: GDScript wrong-file messages match the Python reference
+        run: python tests/cross_check_wrong_file.py --godot ~/godot/godot --dotnet ""

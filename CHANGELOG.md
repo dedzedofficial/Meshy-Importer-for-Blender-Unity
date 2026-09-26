@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.5.0 — easier to use: clear errors, one-stop menus, presets, diagnostics
+
+### Every engine
+- **Plain-language "wrong file" errors.** Instead of "missing MESHY.AI header", the importer now says what the file actually is (a saved web page, a JSON response, a GLB/FBX/OBJ download, a ZIP, an image, an empty or cut-off download) and how to fix it. Each message ends with a link to the matching part of `TROUBLESHOOTING.md`. Python, C# and GDScript share the same wording; CI checks that they agree.
+- **Copy Diagnostics** and **Report a Bug...** in every Meshy menu. The bug report opens a GitHub issue pre-filled with your versions and the last error.
+- **Update check**, at most once a day: it reads the public "latest release" record from GitHub, and nothing about you is sent. Unity, Godot and Unreal show a notice when a newer release exists; Blender only checks when **Allow Online Access** is on. Each engine has a switch to turn it off.
+- **Scale** option in Blender, Unreal (via Unreal's own options dialog) and the command-line converter (`--scale`). Godot's built-in **Root Scale** is documented.
+
+### Unity
+- **Tools > Meshy > Meshy Importer** window: files that failed to import and why, Reimport All, Convert All, help, diagnostics and update settings in one place.
+- Menu reorganized: everyday actions at the top, **Help** and **Advanced** submenus for the rest.
+- **Presets** in the Inspector: Default, Game-ready (colliders) and Keep original data.
+- A failed import shows its reason in the Inspector, with **Open Help**, **Copy Diagnostics** and **Report a Bug...** buttons.
+- **Reimport All** shows progress and lists any files that failed.
+- The welcome dialog appears once, on first install, instead of after every update. Updates log a one-line "what's new" note instead.
+- **HDRP:** metallic, occlusion and smoothness are packed into the `HDRP/Lit` mask map, so HDRP materials are no longer missing metallic/roughness detail.
+- **Normal maps:** every mip level is renormalized, as Unity's own "Normal map" texture setting does, so distant surfaces keep their detail.
+- ScriptedImporter version bumped to 7, so existing `.meshy` assets reimport automatically.
+
+### Blender
+- Import panel: **Preset** (Default / Keep Original Data) and **Scale**.
+- After an import, the status bar summarizes what came in: meshes, faces, materials and UV fixes.
+- A failed import opens a popup with the reason, **Open Help**, **Copy Diagnostics** and **Report a Bug...**.
+- **Help > Meshy Importer** submenu: guides, diagnostics, bug report, update check, Discord.
+- Manifest declares the `network` and `clipboard` permissions.
+
+### Godot
+- **Project > Tools > Meshy Importer** menu: guides, Copy Diagnostics (includes the last error), Report a Bug, Check for Updates, Discord.
+- Update check setting under **Editor Settings > Meshy Importer**.
+
+### Unreal
+- **Auto-Import Inbox Folder**: drop `.meshy` files into `<Project>/MeshyInbox/` and they are imported within seconds. Imported files move to `Imported/`, failed ones to `Failed/`.
+- **Import .meshy Files (Show Options)...** shows Unreal's own import dialog (scale, collision, materials).
+- On start-up, warns once if Unreal's glTF importer (Interchange) is switched off, with the fix.
+- **Meshy Importer Help** submenu: guides, Validate Installation, Copy Diagnostics, Report a Bug, Check for Updates.
+
+### Docs and releases
+- README starts with a three-step Quick Start and a "which download do I need" table.
+- `GETTING_A_MESHY_FILE.md` rewritten: clearer steps, how to check the file, and import steps for every engine. It also no longer describes the old UnityGLTF companion-file workflow.
+- `TROUBLESHOOTING.md` has a "Wrong file errors" table that the error links point to.
+- Pushing a `v*` tag builds `Meshy-Importer-Blender.zip`, `Meshy-Importer-Unreal.zip` and a new `Meshy-Importer-Godot.zip`, and publishes a GitHub release. `PUBLISHING.md` covers OpenUPM, Blender Extensions and the Godot Asset Library.
+
 ## 1.4.1 — one version for every host, UV auto-repair, Godot and Unreal
 
 All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1.3.0.
