@@ -1,6 +1,6 @@
 # Compatibility
 
-All hosts ship as version **1.4.1** and decode `.meshy` payloads locally.
+All hosts ship as version **1.5.0** and decode `.meshy` payloads locally.
 
 ## Unity
 
@@ -17,7 +17,7 @@ The native importer needs no other packages. UnityGLTF is only used for a payloa
 |---|---|
 | Built-in | Full (`Standard`) |
 | URP | Full (`Universal Render Pipeline/Lit`) |
-| HDRP | Partial (`HDRP/Lit` with base colour, normal and emission maps; metallic/roughness and occlusion are not packed into a mask map yet) |
+| HDRP | Full (`HDRP/Lit`, with metallic, occlusion and smoothness packed into the mask map) |
 
 Non-LTS Unity versions may work but are not the recommended support target.
 
@@ -46,7 +46,7 @@ Godot's glTF importer implements neither `EXT_meshopt_compression` nor `KHR_mesh
 
 | Unreal | Status |
 |---|---|
-| 5.3+ | Supported (Editor Python plugin; needs the Python Editor Script Plugin, enabled automatically) |
+| 5.3+ | Supported (Editor Python plugin; the Python Editor Script Plugin is enabled automatically; needs the Interchange/glTF importer) |
 | 5.0–5.2, 4.27 | Not supported |
 
 Meshy's meshopt geometry, quantized attributes, texture transforms and WebP textures are converted to plain glTF before Unreal's glTF (Interchange) importer runs. Install Pillow into the editor's Python for faster WebP decoding.

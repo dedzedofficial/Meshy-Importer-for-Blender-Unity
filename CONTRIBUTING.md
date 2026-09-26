@@ -33,7 +33,8 @@ For Unreal changes:
 - `tests/test_unreal_plugin.py` drives it against a stub `unreal` module. Test real imports in the editor.
 
 Shared code:
-- `core/python/meshy_core` is the reference implementation of decoding, meshopt, WebP and UV repair. Unity (C#) and Godot (GDScript) carry ports of it; change them together.
+- `core/python/meshy_core` is the reference implementation of decoding, meshopt, WebP and UV repair. Unity (C#) and Godot (GDScript) carry ports of it; change them together. That includes the "wrong file" messages (`decode.py describe_wrong_file`, `MeshyFileCheck.cs`, `meshy_decrypt.gd`).
+- Error messages are for players, not programmers: say what happened and what to do, in one or two plain sentences, and end with `Help: <TROUBLESHOOTING.md#anchor>` when a section covers it.
 - The Blender and Unreal ZIPs bundle `meshy_core`. Rebuild them with `python tools/build_zips.py`; never edit a ZIP by hand.
 - Never commit real Meshy payloads. `tests/meshy_fixtures.py` builds synthetic ones.
 
@@ -45,6 +46,7 @@ python tools/check_versions.py                # versions agree everywhere
 python tools/build_zips.py --check            # committed ZIPs are current
 dotnet build tests/csharp/unity-compile       # Unity package type-checks against UnityEngine
 python tests/cross_check_uv.py                # C# / GDScript UV repair match the Python reference (needs dotnet / godot)
+python tests/cross_check_wrong_file.py        # C# / GDScript "wrong file" messages match the Python reference
 blender -b --factory-startup --python tests/hosts/blender_smoke.py -- blender <file.meshy>
 python tests/hosts/godot_smoke.py <path-to-godot>
 ```

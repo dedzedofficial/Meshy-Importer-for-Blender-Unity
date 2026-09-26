@@ -19,7 +19,8 @@ forward cipher), so this runs inside Blender, Unreal and plain Python alike.
 import struct
 
 __all__ = ["MESHY_MAGIC", "MeshyFormatError", "decode_meshy_bytes", "decode_meshy_file",
-           "encode_meshy_bytes", "aes256_encrypt_block", "aes_ctr"]
+           "encode_meshy_bytes", "aes256_encrypt_block", "aes_ctr", "describe_wrong_file",
+           "HELP_WRONG_FILE", "HELP_FORMAT_CHANGED"]
 
 MESHY_MAGIC = b"MESHY.AI"
 # Meshy's current .meshy wrapper uses this fixed AES-256 key.
@@ -28,6 +29,10 @@ _HEADER_SIZE = 32
 _ENCRYPTED_SIZE = 8192
 _TAG_SIZE = 16
 _MIN_SIZE = _HEADER_SIZE + _ENCRYPTED_SIZE + _TAG_SIZE
+
+_DOCS = "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/blob/main/TROUBLESHOOTING.md"
+HELP_WRONG_FILE = _DOCS + "#wrong-file-errors"
+HELP_FORMAT_CHANGED = _DOCS + "#meshy-changed-its-web-format"
 
 
 class MeshyFormatError(ValueError):
@@ -124,19 +129,62 @@ def aes_ctr(data, key, nonce, initial_counter=2):
 
 # ---- container -----------------------------------------------------------------
 
+def describe_wrong_file(data):
+    """Explain, in one plain sentence plus a fix, why `data` is not a usable .meshy file.
+
+    Returns None when the data looks like a complete .meshy container. The Unity
+    (MeshyImporterMenu.DescribeWrongFile) and Godot (meshy_decrypt.gd) ports use the
+    same checks and wording; change them together.
+    """
+    data = bytes(data[:_MIN_SIZE])
+    if not data:
+        return "The file is empty. The download probably failed; save the model response again."
+    if data[:8] == MESHY_MAGIC:
+        if len(data) < _MIN_SIZE:
+            return ("The .meshy file is cut off (only %d bytes). Save the complete model response again."
+                    % len(data))
+        return None
+    head = data[:512].lstrip(b"\xef\xbb\xbf \t\r\n").lower()
+    if data[:4] == b"glTF":
+        what = ("This is a plain GLB, not a .meshy payload. Import it as a .glb instead; "
+                "it does not need the Meshy Importer.")
+    elif head.startswith((b"<!doctype", b"<html", b"<?xml", b"<head", b"<body")):
+        what = ("This is a web page (HTML), not the model. In the Network tab, save the model "
+                "request's response instead of the page.")
+    elif head[:1] in (b"{", b"["):
+        what = ("This is a JSON API response, not the model. Pick the request whose response "
+                "starts with MESHY.AI.")
+    elif data.startswith(b"Kaydara FBX Binary") or head.startswith(b"; fbx"):
+        what = ("This is an FBX file (Meshy's normal Download). Import it directly as .fbx; "
+                "it does not need the Meshy Importer.")
+    elif data[:4] == b"PK\x03\x04":
+        what = ("This is a ZIP archive. Unzip it; if it holds .glb/.fbx/.obj files, "
+                "import those directly.")
+    elif data[:8] == b"\x89PNG\r\n\x1a\n" or data[:3] == b"\xff\xd8\xff" or \
+            (data[:4] == b"RIFF" and data[8:12] == b"WEBP"):
+        what = "This is an image, not a model. Save the model request's response instead."
+    elif any(head.startswith(p) for p in (b"# ", b"mtllib", b"o ", b"v ", b"g ")):
+        what = ("This is an OBJ file (Meshy's normal Download). Import it directly as .obj; "
+                "it does not need the Meshy Importer.")
+    else:
+        what = ("This is not a .meshy file: it does not start with MESHY.AI. "
+                "Make sure you saved the model response, not another request.")
+    return what
+
+
 def decode_meshy_bytes(data):
     """Return the GLB bytes contained in a .meshy payload."""
     data = bytes(data)
-    if data[:4] == b"glTF":
-        raise MeshyFormatError("This is a plain GLB, not a .meshy payload. Import it as a .glb instead.")
-    if len(data) < _MIN_SIZE or data[:8] != MESHY_MAGIC:
-        raise MeshyFormatError("Not a valid Meshy .meshy file: missing MESHY.AI header.")
+    problem = describe_wrong_file(data)
+    if problem:
+        raise MeshyFormatError(problem + " Help: " + HELP_WRONG_FILE)
     nonce = data[10:22]
     first = aes_ctr(data[_HEADER_SIZE:_HEADER_SIZE + _ENCRYPTED_SIZE], _KEY, nonce)
     glb = bytearray(first + data[_MIN_SIZE:])
     if len(glb) < 12 or glb[:4] != b"glTF":
-        raise MeshyFormatError("Meshy decryption produced an invalid GLB header. "
-                               "The .meshy encryption format may have changed.")
+        raise MeshyFormatError("Meshy decryption produced an invalid GLB header. Meshy may have "
+                               "changed the .meshy format; update the importer or report the file. "
+                               "Help: " + HELP_FORMAT_CHANGED)
     struct.pack_into("<I", glb, 8, len(glb))
     return bytes(glb)
 

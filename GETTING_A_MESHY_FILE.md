@@ -1,33 +1,39 @@
 # How to Get a `.meshy` File
 
-> **Important:** Meshy's normal Download button provides standard formats such as GLB/FBX/OBJ. The `.meshy` payload used by this importer is obtained from the model request in the web application.
+> **First check you need one.** Meshy's normal **Download** button gives you a `.glb`, `.fbx` or `.obj` file. Every engine imports those directly, without this importer. The `.meshy` file is what the Meshy website itself loads to show the model in your browser. This guide shows how to save it.
 
-## Chrome DevTools workflow
+## Save it with Chrome (about a minute)
 
-1. Open the Meshy model in **Google Chrome**.
-2. Press **F12** or **Ctrl+Shift+I**.
-3. Open **Network**.
-4. Reload the model page so the requests populate.
-5. In the Network filter/search box, enter **`model`**.
-6. Locate the request that contains the actual model payload. Request names and URLs can change as Meshy updates its website.
-7. Save the response/body to disk.
-8. Give it the `.meshy` extension only if it is the actual Meshy payload.
-9. Verify it starts with the `MESHY.AI` signature.
+1. Open the model's page on the Meshy website in **Google Chrome** (Edge and other Chromium browsers work the same way).
+2. Press **F12** (or **Ctrl+Shift+I**, or **Cmd+Option+I** on a Mac) to open DevTools.
+3. Click the **Network** tab.
+4. Reload the page (**F5**) with DevTools still open, so the requests are recorded.
+5. Type **`model`** in the Network filter box.
+6. Find the request whose response is the model. It is usually the largest one: click the **Size** column header to sort by size. Request names and URLs change when Meshy updates its website.
+7. Right-click that request and choose **Open in new tab**. The browser downloads the file. Alternatively, open the request's **Response** tab and save it from there.
+8. Rename the downloaded file so it ends in **`.meshy`**, for example `dragon.meshy`.
 
-### Do not do this
+### Check you saved the right thing
 
-Do **not** rename `model.glb`, `model.fbx`, `model.obj`, an HTML page, or a JSON API response to `model.meshy`. The importer validates the `MESHY.AI` container signature before decoding.
+A real `.meshy` file:
 
-## Unity
+- starts with the text **`MESHY.AI`** (open it in a text editor to check; the rest looks like gibberish), and
+- is usually **several megabytes** in size.
 
-Put the real file anywhere under the project's `Assets` folder:
+If you picked the wrong request, the importer tells you what you saved instead, for example "This is a web page (HTML), not the model" or "This is a JSON API response". Go back to step 6 and try the next-largest request.
 
-```text
-Assets/Models/MyMeshyModel.meshy
-```
+### Don't do this
 
-The Meshy Importer registers `.meshy` with Unity's Asset Pipeline, creates a native Meshy source asset, and automatically reconstructs a local `.glb` companion for UnityGLTF.
+Don't rename a `.glb`, `.fbx`, `.obj`, an HTML page or a JSON response to `.meshy`. It won't work: the importer checks for the `MESHY.AI` signature before decoding.
 
-## Blender
+## Import it
 
-Use **File > Import > Meshy Model (.meshy)**. The bundled Blender add-on reconstructs the GLB in memory/temp storage and sends it to Blender's native glTF importer.
+| Engine | How |
+|---|---|
+| **Unity** | Drop it anywhere under `Assets/`, for example `Assets/Models/dragon.meshy`. Unity builds the model right away. Select the file to see its settings. |
+| **Blender** | **File > Import > Meshy Model (.meshy)**, or drag the file into the 3D viewport (Blender 4.1+). |
+| **Godot** | Drop it anywhere in the FileSystem dock. It imports like any 3D scene; double-click to open it. |
+| **Unreal** | **Tools > Meshy > Import .meshy Files...**, or turn on **Tools > Meshy > Auto-Import Inbox Folder** and drop it into `<Project>/MeshyInbox/`. |
+| **Anything else** | `python -m meshy_core dragon.meshy` writes a normal `dragon.glb` (see the [README](README.md#-command-line-converter)). |
+
+Having trouble? See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#wrong-file-errors).

@@ -25,6 +25,7 @@ def main():
         shutil.copytree(os.path.join(ROOT, "godot", "addons"), os.path.join(project, "addons"))
         shutil.copy(os.path.join(HERE, "godot_inspect.gd"), project)
         shutil.copy(os.path.join(HERE, "godot_meshopt_vectors.gd"), project)
+        shutil.copy(os.path.join(HERE, "godot_plugin_checks.gd"), project)
         with open(os.path.join(project, "clean.meshy"), "wb") as f:
             f.write(build_meshy())
         with open(os.path.join(project, "broken.meshy"), "wb") as f:
@@ -45,6 +46,12 @@ def main():
         print("\n".join(l for l in vec.stdout.splitlines() if "MESHOPT" in l or "FAIL" in l))
         if vec.returncode != 0:
             print(vec.stderr[-3000:])
+            return 1
+        chk = subprocess.run([godot, "--headless", "--path", project, "--script", "res://godot_plugin_checks.gd"],
+                             capture_output=True, text=True, timeout=600)
+        print("\n".join(l for l in chk.stdout.splitlines() if "PLUGIN CHECKS" in l))
+        if chk.returncode != 0:
+            print(chk.stdout[-3000:], chk.stderr[-3000:])
             return 1
     print("GODOT SMOKE TEST PASSED")
     return 0

@@ -20,6 +20,7 @@ def main(argv=None):
                     help="only decrypt; keep Meshy's compression/extensions exactly as they are")
     ap.add_argument("--keep-webp", action="store_true", help="do not convert WebP textures to PNG")
     ap.add_argument("--no-uv-repair", action="store_true", help="do not repair broken UVs")
+    ap.add_argument("--scale", type=float, default=1.0, help="uniform scale for the whole model (default 1.0)")
     ap.add_argument("--version", action="version", version="meshy_core " + __version__)
     args = ap.parse_args(argv)
 
@@ -27,7 +28,10 @@ def main(argv=None):
         ap.error("--output must be a directory when converting several files")
 
     opts = NormalizeOptions.for_host("full", webp_to_png=not args.keep_webp,
-                                     repair_uvs=not args.no_uv_repair, log=lambda m: print("  " + m))
+                                     repair_uvs=not args.no_uv_repair, scale=args.scale,
+                                     log=lambda m: print("  " + m))
+    if args.scale <= 0:
+        ap.error("--scale must be greater than 0")
     if not args.raw and not args.keep_webp and not has_pillow():
         print("note: Pillow not found, using the built-in WebP decoder (slower for large textures)")
 
@@ -50,7 +54,7 @@ def main(argv=None):
             print("wrote %s (%.1f s)" % (out, time.time() - t))
         except Exception as exc:  # report and keep going with the rest
             failures += 1
-            print("error: %s: %s" % (path, exc), file=sys.stderr)
+            print("error: %s: %s" % (os.path.basename(path), exc), file=sys.stderr)
     return 1 if failures else 0
 
 

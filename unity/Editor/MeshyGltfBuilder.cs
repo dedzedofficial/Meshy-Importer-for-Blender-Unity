@@ -288,8 +288,6 @@ namespace FISHHWB.MeshyImporter.Editor
             result.TextureCount = ctx.TextureCache.Values.Select(t => t).Distinct().Count();
             result.MaterialCount = ctx.MaterialCache.Count;
             result.AssetType = DetectAssetType(ctx, result);
-            if (ctx.UsingHdrp && ctx.Materials.Count > 0)
-                result.Notes.Add("HDRP: base colour, normal and emission maps are set; metallic/roughness and occlusion are not packed into an HDRP mask map yet.");
             foreach (var kv in ctx.NodeObjects) result.Nodes[kv.Key] = kv.Value;
 
             return result;
@@ -949,7 +947,7 @@ namespace FISHHWB.MeshyImporter.Editor
             var normalTex = MeshyMiniJson.Get(m, "normalTexture");
             if (normalTex != null)
             {
-                var tex = GetTexture(ctx, MeshyMiniJson.GetInt(normalTex, "index", -1), linear: true);
+                var tex = GetTexture(ctx, MeshyMiniJson.GetInt(normalTex, "index", -1), linear: true, normalMap: true);
                 if (tex != null)
                 {
                     SetTexture(mat, ctx, "_BumpMap", "_BumpMap", tex, "_NormalMap");
@@ -967,6 +965,25 @@ namespace FISHHWB.MeshyImporter.Editor
                 {
                     SetTexture(mat, ctx, "_OcclusionMap", "_OcclusionMap", tex);
                     SetFloat(mat, ctx, "_OcclusionStrength", "_OcclusionStrength", (float)MeshyMiniJson.GetNumber(occTex, "strength", 1));
+                }
+            }
+
+            if (ctx.UsingHdrp && (mrTex != null || occTex != null))
+            {
+                var mask = GetHdrpMaskMap(ctx, materialIndex,
+                    mrTex != null ? MeshyMiniJson.GetInt(mrTex, "index", -1) : -1,
+                    occTex != null ? MeshyMiniJson.GetInt(occTex, "index", -1) : -1,
+                    metallic, roughness, occTex != null ? (float)MeshyMiniJson.GetNumber(occTex, "strength", 1) : 1f);
+                if (mask != null && mat.HasProperty("_MaskMap"))
+                {
+                    // With a mask map HDRP/Lit reads metallic, AO and smoothness from it and only
+                    // remaps them through these ranges; the glTF factors are baked into the map.
+                    mat.SetTexture("_MaskMap", mask);
+                    foreach (var range in new[] { "_Metallic", "_Smoothness", "_AO" })
+                    {
+                        if (mat.HasProperty(range + "RemapMin")) mat.SetFloat(range + "RemapMin", 0f);
+                        if (mat.HasProperty(range + "RemapMax")) mat.SetFloat(range + "RemapMax", 1f);
+                    }
                 }
             }
 
@@ -1096,7 +1113,7 @@ namespace FISHHWB.MeshyImporter.Editor
             if (mat.HasProperty(prop)) mat.SetTexture(prop, tex);
         }
 
-        private static RenderPipelineKind DetectPipeline()
+        internal static RenderPipelineKind DetectPipeline()
         {
             var asset = GraphicsSettings.currentRenderPipeline;
             if (asset == null) return RenderPipelineKind.BuiltIn;
@@ -1171,7 +1188,7 @@ namespace FISHHWB.MeshyImporter.Editor
             }
         }
 
-        private static Texture2D GetTexture(Ctx ctx, int textureIndex, bool linear)
+        private static Texture2D GetTexture(Ctx ctx, int textureIndex, bool linear, bool normalMap = false)
         {
             if (textureIndex < 0 || textureIndex >= ctx.Textures.Count) return null;
             var texDef = MeshyMiniJson.AsObject(ctx.Textures[textureIndex]);
@@ -1188,7 +1205,7 @@ namespace FISHHWB.MeshyImporter.Editor
             else
                 return null;
 
-            long cacheKey = (long)imageIndex * 2 + (linear ? 1 : 0);
+            long cacheKey = (long)imageIndex * 4 + (linear ? 1 : 0) + (normalMap ? 2 : 0);
             if (ctx.TextureCache.TryGetValue(cacheKey, out var cached)) return cached;
 
             var bytes = GetImageBytes(ctx, imageIndex);
@@ -1229,9 +1246,93 @@ namespace FISHHWB.MeshyImporter.Editor
                     ApplySampler(tex, MeshyMiniJson.AsObject(ctx.Samplers[samplerIndex]));
             }
 
-            tex.name = "image" + imageIndex + (linear ? "_linear" : "_srgb");
+            if (normalMap) RenormalizeNormalMips(tex);
+
+            tex.name = "image" + imageIndex + (normalMap ? "_normal" : linear ? "_linear" : "_srgb");
             ctx.TextureCache[cacheKey] = tex;
             return tex;
+        }
+
+        // Unity's texture importer renormalizes every mip level of a texture marked "Normal
+        // map"; a plain box-filtered mip chain shortens the averaged vectors, so distant
+        // surfaces look flatter and darker than they should. An in-memory sub-asset has no
+        // TextureImporter to flag, so do the same here. Mip 0 is left exactly as decoded.
+        private static void RenormalizeNormalMips(Texture2D tex)
+        {
+            if (tex.mipmapCount <= 1) return;
+            try
+            {
+                for (int mip = 1; mip < tex.mipmapCount; mip++)
+                {
+                    var pixels = tex.GetPixels(mip);
+                    for (int i = 0; i < pixels.Length; i++)
+                    {
+                        var c = pixels[i];
+                        var n = new Vector3(c.r * 2f - 1f, c.g * 2f - 1f, c.b * 2f - 1f);
+                        float len = n.magnitude;
+                        if (len < 1e-5f) n = new Vector3(0f, 0f, 1f);
+                        else n /= len;
+                        pixels[i] = new Color(n.x * 0.5f + 0.5f, n.y * 0.5f + 0.5f, n.z * 0.5f + 0.5f, c.a);
+                    }
+                    tex.SetPixels(pixels, mip);
+                }
+                tex.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            }
+            catch (UnityException)
+            {
+                // Non-readable or unsupported format: keep the plain mip chain.
+            }
+        }
+
+        // HDRP/Lit's mask map: R = metallic, G = ambient occlusion, B = detail mask, A = smoothness.
+        // glTF keeps metallic (B) and roughness (G) in one texture and occlusion (R) in another
+        // (often the same image), so repack both into one map, baking in the material's factors.
+        private static Texture2D GetHdrpMaskMap(Ctx ctx, int materialIndex, int mrIndex, int occIndex,
+            float metallicFactor, float roughnessFactor, float occlusionStrength)
+        {
+            long cacheKey = 200000L + materialIndex; // one per material: the factors are baked in
+            if (ctx.TextureCache.TryGetValue(cacheKey, out var cached)) return cached;
+
+            var mr = mrIndex >= 0 ? GetTexture(ctx, mrIndex, linear: true) : null;
+            var occ = occIndex >= 0 ? GetTexture(ctx, occIndex, linear: true) : null;
+            var size = mr ?? occ;
+            if (size == null) return null;
+            int w = size.width, h = size.height;
+
+            Color[] mrPixels, occPixels;
+            try
+            {
+                mrPixels = mr != null ? mr.GetPixels() : null;
+                occPixels = occ != null ? occ.GetPixels() : null;
+            }
+            catch (UnityException) { return null; }
+            bool occSameSize = occ != null && occ.width == w && occ.height == h;
+
+            var outPixels = new Color[w * h];
+            for (int y = 0, i = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++, i++)
+                {
+                    float metallic = metallicFactor, roughness = roughnessFactor, ao = 1f;
+                    if (mrPixels != null)
+                    {
+                        metallic *= mrPixels[i].b;
+                        roughness *= mrPixels[i].g;
+                    }
+                    if (occ != null)
+                    {
+                        float r = occSameSize ? occPixels[i].r : occ.GetPixelBilinear((x + 0.5f) / w, (y + 0.5f) / h).r;
+                        ao = 1f + occlusionStrength * (r - 1f);
+                    }
+                    outPixels[i] = new Color(Mathf.Clamp01(metallic), Mathf.Clamp01(ao), 1f, Mathf.Clamp01(1f - roughness));
+                }
+            }
+            var mask = new Texture2D(w, h, TextureFormat.RGBA32, true, true) { name = "material" + materialIndex + "_hdrpMask" };
+            mask.SetPixels(outPixels);
+            mask.Apply();
+            if (mr != null) { mask.wrapModeU = mr.wrapModeU; mask.wrapModeV = mr.wrapModeV; mask.filterMode = mr.filterMode; }
+            ctx.TextureCache[cacheKey] = mask;
+            return mask;
         }
 
         // glTF packs metallic/roughness as B=metallic, G=roughness; Unity's
@@ -1240,7 +1341,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             var src = GetTexture(ctx, textureIndex, linear: true);
             if (src == null) return null;
-            long cacheKey = (long)textureIndex * 2 + 100000; // distinct namespace from GetTexture's cache
+            long cacheKey = (long)textureIndex * 2 + 100000; // distinct namespace from GetTexture's cache (HDRP masks use 200000+)
             if (ctx.TextureCache.TryGetValue(cacheKey, out var cached)) return cached;
 
             Color[] pixels;

@@ -68,6 +68,19 @@ class NormalizeTests(unittest.TestCase):
         with open(os.path.join(FIX, "gradient_40x24.rgb"), "rb") as f:
             self.assertEqual(rgb, f.read())
 
+    def test_scale_adds_one_scaled_root(self):
+        plain, _ = normalize.normalize_meshy_bytes(build_meshy(), normalize.NormalizeOptions.for_host("full"))
+        glb, _ = normalize.normalize_meshy_bytes(build_meshy(), normalize.NormalizeOptions.for_host("full", scale=0.01))
+        before, _ = read_chunks(plain)
+        gltf, _ = read_chunks(glb)
+        roots = gltf["scenes"][gltf.get("scene", 0)]["nodes"]
+        self.assertEqual(len(roots), 1)
+        root = gltf["nodes"][roots[0]]
+        self.assertEqual(root["scale"], [0.01, 0.01, 0.01])
+        self.assertEqual(root["children"], before["scenes"][before.get("scene", 0)]["nodes"])
+        with self.assertRaises(ValueError):
+            normalize.normalize_meshy_bytes(build_meshy(), normalize.NormalizeOptions.for_host("full", scale=0))
+
     def test_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "model.meshy")

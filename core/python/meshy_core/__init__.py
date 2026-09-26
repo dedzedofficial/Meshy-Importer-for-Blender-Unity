@@ -5,7 +5,7 @@ Used by the Blender add-on, the Unreal plugin and the command-line converter
 importers carry their own ports of the same code.
 """
 
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 from .decode import MeshyFormatError, decode_meshy_bytes, decode_meshy_file  # noqa: F401
 from .normalize import NormalizeOptions, normalize_glb, normalize_meshy_bytes, normalize_meshy_file  # noqa: F401

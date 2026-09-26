@@ -5,6 +5,6 @@ import unreal
 try:
     import meshy_unreal
 
-    meshy_unreal.register_menus()
+    meshy_unreal.on_editor_start()
 except Exception as exc:  # never break editor start-up
-    unreal.log_error("Meshy Importer: failed to register menus: %s" % exc)
+    unreal.log_error("Meshy Importer: failed to start: %s" % exc)
