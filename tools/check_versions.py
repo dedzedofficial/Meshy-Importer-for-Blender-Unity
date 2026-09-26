@@ -35,6 +35,8 @@ SOURCES = [
      lambda: _search("godot/addons/meshy_importer/plugin.cfg", r'^version="([^"]+)"', re.M)),
     ("godot/addons/meshy_importer/meshy_scene_importer.gd",
      lambda: _search("godot/addons/meshy_importer/meshy_scene_importer.gd", r'"meshy_importer_version",\s*"([^"]+)"')),
+    ("godot/addons/meshy_importer/meshy_support.gd",
+     lambda: _search("godot/addons/meshy_importer/meshy_support.gd", r'^const VERSION := "([^"]+)"', re.M)),
     ("unreal/MeshyImporter/MeshyImporter.uplugin",
      lambda: json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["VersionName"]),
     ("unreal/MeshyImporter/Content/Python/meshy_unreal.py",

@@ -16,7 +16,8 @@ namespace FISHHWB.MeshyImporter.Editor
     // a user already imported under an older version of this package. (1.3.1-1.3.4
     // shipped fixes that never reached existing assets because this was not bumped.)
     // 6 = 1.4.1: 32-bit indices for large meshes, UV auto-repair, HDRP materials.
-    [ScriptedImporter(6, new[] { "meshy" }, AllowCaching = true)]
+    // 7 = 1.5.0: HDRP mask maps (metallic/AO/smoothness), renormalized normal-map mips.
+    [ScriptedImporter(7, new[] { "meshy" }, AllowCaching = true)]
     public sealed class MeshyScriptedImporter : ScriptedImporter
     {
         [Tooltip("Uniform scale applied to the imported model's root.")]

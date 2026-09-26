@@ -18,17 +18,17 @@ func _get_import_flags() -> int:
 
 func _import_scene(path: String, flags: int, options: Dictionary) -> Object:
 	var bytes := FileAccess.get_file_as_bytes(path)
-	if bytes.is_empty():
-		push_error("Meshy Importer: could not read %s" % path)
+	if bytes.is_empty() and FileAccess.get_open_error() != OK:
+		_fail(path, "Could not read the file (error %d)." % FileAccess.get_open_error())
 		return null
 	var decoded := Decrypt.decode(bytes)
 	if decoded.has("error"):
-		push_error("Meshy Importer: %s: %s" % [path, decoded["error"]])
+		_fail(path, decoded["error"])
 		return null
 	var repair := bool(options.get("meshy/auto_repair_uvs", true))
 	var normalized := Glb.normalize(decoded["glb"], repair)
 	if normalized.has("error"):
-		push_error("Meshy Importer: %s: %s" % [path, normalized["error"]])
+		_fail(path, normalized["error"])
 		return null
 	var glb: PackedByteArray = normalized["glb"]
 
@@ -47,12 +47,12 @@ func _import_scene(path: String, flags: int, options: Dictionary) -> Object:
 	var doc := GLTFDocument.new()
 	var err := doc.append_from_buffer(glb, path.get_base_dir(), state, flags)
 	if err != OK:
-		push_error("Meshy Importer: Godot's glTF importer rejected %s (error %d)." % [path, err])
+		_fail(path, "Godot's glTF importer rejected the decoded model (error %d)." % err)
 		return null
 	var scene: Node = doc.generate_scene(state, float(options.get("animation/fps", 30.0)),
 		bool(options.get("animation/trimming", false)), bool(options.get("animation/remove_immutable_tracks", true)))
 	if scene == null:
-		push_error("Meshy Importer: could not build a scene from %s." % path)
+		_fail(path, "Could not build a scene from the decoded model.")
 		return null
 
 	var bad := 0
@@ -61,10 +61,17 @@ func _import_scene(path: String, flags: int, options: Dictionary) -> Object:
 		bad += int(st["bad_vertices"])
 		if st["regenerated"]:
 			regenerated += 1
-	scene.set_meta("meshy_importer_version", "1.4.1")
+	scene.set_meta("meshy_importer_version", "1.5.0")
 	scene.set_meta("meshy_uv_bad_vertices", bad)
 	scene.set_meta("meshy_uv_regenerated_meshes", regenerated)
 	if bad > 0:
 		print("Meshy Importer: %s: repaired %d bad vertex UV(s)%s." % [path, bad,
 			(", regenerated UVs on %d mesh(es)" % regenerated) if regenerated > 0 else ""])
 	return scene
+
+
+## Errors go to the Output panel; the last one is kept for Project > Tools > Meshy Importer >
+## Copy Diagnostics.
+static func _fail(path: String, message: String) -> void:
+	push_error("Meshy Importer: %s: %s" % [path, message])
+	Engine.set_meta("meshy_last_error", "%s: %s" % [path.get_file(), message])

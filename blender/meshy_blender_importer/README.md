@@ -1,6 +1,6 @@
 # Meshy Importer for Blender & Unity — Blender
 
-**Version 1.4.1**
+**Version 1.5.0**
 
 This Blender extension adds:
 
@@ -13,7 +13,7 @@ It reads the Meshy `.meshy` container locally, decrypts the encrypted GLB prefix
 ### Blender 4.2+
 Use the included **`Meshy Importer for Blender & Unity - Blender.zip`** with:
 
-**Edit → Preferences → Get Extensions → ⋯ → Install from Disk**
+**Edit → Preferences → Get Extensions → ⌄ (top right) → Install from Disk**
 
 Then enable **Meshy Importer for Blender & Unity**.
 
@@ -32,9 +32,23 @@ The add-on decrypts each file locally, creates a temporary GLB, imports it with 
 
 ### Import options (file browser side panel)
 
+- **Preset**: **Default** (repair UVs, remove unused slots) or **Keep Original Data** (import exactly what the file contains). Changing an option by hand shows **Custom**.
+- **Scale** (1.0): uniform scale for the imported model.
 - **Auto-repair UVs** (on): fixes broken UVs (NaN values, wild outliers, collapsed triangles) and leaves valid Meshy UVs alone. A mesh with no UVs, or mostly broken ones, gets a Smart UV Project. Results are stored on each object as `FISHHWB_Meshy_UV_*` custom properties.
 - **Remove Unused Material Slots** (on): drops slots no face uses. The materials themselves are kept.
 - **Save Decoded .glb** (off): also writes `<name>.glb` next to the `.meshy` file. An existing file is never overwritten.
+
+After an import the status bar shows what came in, for example "Imported dragon.meshy: 3 mesh(es), 48,210 faces, 2 material(s); UVs fixed on 1 mesh(es)."
+
+If a file can't be imported, a popup says why in plain words (for example "This is a web page (HTML), not the model") with **Open Help**, **Copy Diagnostics** and **Report a Bug...** buttons.
+
+### Help menu
+
+**Help → Meshy Importer**: How Do I Get a .meshy File?, Troubleshooting, Documentation, Copy Diagnostics, Report a Bug..., Check for Updates, Discord, Support on Patreon. An **Update Available** entry appears at the top when a newer release exists.
+
+### Update check
+
+Once a day, if Blender's **Allow Online Access** (Preferences → System → Network, Blender 4.2+) is on, the add-on asks GitHub for the latest release. Only the public release record is downloaded; nothing about you is sent. Turn it off in the add-on's preferences.
 
 ## Compatibility
 
@@ -44,7 +58,7 @@ The add-on decrypts each file locally, creates a temporary GLB, imports it with 
 
 ## Security / privacy
 
-The decoder runs locally. The `.meshy` model is not uploaded by this add-on.
+The decoder runs locally. The `.meshy` model is not uploaded by this add-on. The only network access is the optional update check described above.
 
 ## Format
 

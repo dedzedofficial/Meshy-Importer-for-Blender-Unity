@@ -38,8 +38,26 @@ namespace FISHHWB.MeshyImporter.Editor
 
             EditorGUILayout.LabelField("Meshy Importer " + MeshyImporterMenu.Version, EditorStyles.boldLabel);
 
+            if (source != null && MeshySupport.IsFailure(source.Status))
+            {
+                string message = source.Status;
+                string help = MeshySupport.HelpLink(message);
+                if (help != null) message = message.Substring(0, message.IndexOf("Help: ", System.StringComparison.Ordinal)).TrimEnd();
+                EditorGUILayout.HelpBox(message, MessageType.Error);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (help != null && GUILayout.Button("Open Help")) Application.OpenURL(help);
+                    if (GUILayout.Button("Copy Diagnostics")) MeshySupport.CopyDiagnostics(importer.assetPath);
+                    if (GUILayout.Button("Report a Bug...")) MeshySupport.ReportBug(importer.assetPath);
+                }
+                EditorGUILayout.Space(6);
+            }
+
             serializedObject.Update();
             EditorGUILayout.LabelField("Import Settings", EditorStyles.boldLabel);
+            int current = CurrentPreset();
+            int picked = EditorGUILayout.Popup(new GUIContent("Preset", PresetTooltip), current, PresetOptions);
+            if (picked != current && picked < Presets.Length) ApplyPreset(Presets[picked]);
             EditorGUILayout.PropertyField(_scaleFactor, new GUIContent("Scale Factor"));
             EditorGUILayout.PropertyField(_autoRepairUvs, new GUIContent("Auto-repair UVs"));
             EditorGUILayout.PropertyField(_generateColliders, new GUIContent("Generate Colliders"));
@@ -52,7 +70,8 @@ namespace FISHHWB.MeshyImporter.Editor
                 EditorGUILayout.Space(6);
                 EditorGUILayout.LabelField("Source", source.SourcePath);
                 EditorGUILayout.LabelField("Size", FormatBytes(source.SourceSize));
-                EditorGUILayout.HelpBox(source.Status ?? "", source.Status != null && source.Status.StartsWith("Import failed") ? MessageType.Error : MessageType.Info);
+                if (!MeshySupport.IsFailure(source.Status))
+                    EditorGUILayout.HelpBox(source.Status ?? "", MessageType.Info);
                 if (!string.IsNullOrEmpty(source.GeneratedGlbPath))
                     EditorGUILayout.LabelField("Generated GLB", source.GeneratedGlbPath);
 
@@ -83,6 +102,50 @@ namespace FISHHWB.MeshyImporter.Editor
                 }
                 if (GUILayout.Button("Validate")) MeshyImporterMenu.ValidateOne(importer.assetPath);
             }
+        }
+
+        // Presets set the on/off import options at once (Scale Factor is left alone).
+        // "Custom" shows when the values match none.
+        private struct Preset
+        {
+            public string Name;
+            public bool RepairUvs, Colliders, Optimize;
+        }
+
+        private static readonly Preset[] Presets =
+        {
+            new Preset { Name = "Default", RepairUvs = true, Colliders = false, Optimize = true },
+            new Preset { Name = "Game-ready (colliders)", RepairUvs = true, Colliders = true, Optimize = true },
+            new Preset { Name = "Keep original data", RepairUvs = false, Colliders = false, Optimize = false },
+        };
+
+        private static readonly GUIContent[] PresetOptions =
+        {
+            new GUIContent("Default"), new GUIContent("Game-ready (colliders)"), new GUIContent("Keep original data"), new GUIContent("Custom"),
+        };
+
+        private const string PresetTooltip =
+            "Default: repair broken UVs, optimize meshes.\n" +
+            "Game-ready: Default plus a MeshCollider on every static mesh.\n" +
+            "Keep original data: no UV repair or mesh reordering, exactly what the file contains.";
+
+        private int CurrentPreset()
+        {
+            for (int i = 0; i < Presets.Length; i++)
+            {
+                var p = Presets[i];
+                if (_autoRepairUvs.boolValue == p.RepairUvs &&
+                    _generateColliders.boolValue == p.Colliders && _optimizeMeshes.boolValue == p.Optimize)
+                    return i;
+            }
+            return PresetOptions.Length - 1;
+        }
+
+        private void ApplyPreset(Preset p)
+        {
+            _autoRepairUvs.boolValue = p.RepairUvs;
+            _generateColliders.boolValue = p.Colliders;
+            _optimizeMeshes.boolValue = p.Optimize;
         }
 
         private static string FormatBytes(long bytes)

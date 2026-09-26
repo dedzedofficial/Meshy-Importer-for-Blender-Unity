@@ -4,6 +4,7 @@ import unittest
 
 import _path  # noqa: F401
 from meshy_core import decode
+from meshy_fixtures import WRONG_FILE_CASES
 
 
 class AesTests(unittest.TestCase):
@@ -55,6 +56,22 @@ class ContainerTests(unittest.TestCase):
         meshy[10] ^= 0xFF  # corrupt the nonce
         with self.assertRaisesRegex(decode.MeshyFormatError, "invalid GLB header"):
             decode.decode_meshy_bytes(bytes(meshy))
+
+
+class WrongFileTests(unittest.TestCase):
+    CASES = WRONG_FILE_CASES
+
+    def test_each_wrong_file_gets_a_specific_message_and_help_link(self):
+        for data, phrase in self.CASES:
+            with self.subTest(phrase=phrase):
+                with self.assertRaises(decode.MeshyFormatError) as cm:
+                    decode.decode_meshy_bytes(data)
+                self.assertIn(phrase, str(cm.exception))
+                self.assertIn(decode.HELP_WRONG_FILE, str(cm.exception))
+
+    def test_valid_container_has_no_problem(self):
+        glb = b"glTF" + struct.pack("<II", 2, 9000) + b"\x00" * 8988
+        self.assertIsNone(decode.describe_wrong_file(decode.encode_meshy_bytes(glb)))
 
 
 if __name__ == "__main__":

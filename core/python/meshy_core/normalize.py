@@ -6,7 +6,8 @@ Steps, each optional except the first two:
   3. dequantize: rewrite KHR_mesh_quantization attributes as FLOAT accessors;
   4. bake KHR_texture_transform into TEXCOORD_n and drop the extension;
   5. repair broken UVs (uv_repair.py);
-  6. transcode EXT_texture_webp images to PNG.
+  6. transcode EXT_texture_webp images to PNG;
+  7. scale the whole model (a new root node, so skinning and animation are untouched).
 
 Blender needs 1-2 (its glTF importer rejects meshopt); Unreal needs all of them.
 """
@@ -32,7 +33,7 @@ _TRANSFORM_SLOTS = (
 
 class NormalizeOptions(object):
     def __init__(self, decode_meshopt=True, dequantize=False, bake_texture_transform=False,
-                 repair_uvs=False, webp_to_png=False, prefer_pillow=True, log=None):
+                 repair_uvs=False, webp_to_png=False, prefer_pillow=True, log=None, scale=1.0):
         self.decode_meshopt = decode_meshopt
         self.dequantize = dequantize
         self.bake_texture_transform = bake_texture_transform
@@ -40,6 +41,7 @@ class NormalizeOptions(object):
         self.webp_to_png = webp_to_png
         self.prefer_pillow = prefer_pillow
         self.log = log or (lambda msg: None)
+        self.scale = float(scale)
 
     @classmethod
     def for_host(cls, host, **kw):
@@ -274,8 +276,26 @@ def normalize_glb(glb, options=None):
         _repair(doc, report, options.log)
     if options.webp_to_png:
         _webp_to_png(doc, report, options.prefer_pillow)
+    if options.scale != 1.0:
+        _apply_scale(doc, options.scale)
     _drop_unused(doc)
     return doc.to_glb(), report
+
+
+def _apply_scale(doc, factor):
+    """Parent every scene's root nodes to one new node carrying a uniform scale."""
+    if not (factor > 0 and math.isfinite(factor)):
+        raise ValueError("scale must be a positive number, got %r" % factor)
+    g = doc.gltf
+    nodes = g.setdefault("nodes", [])
+    scenes = g.get("scenes")
+    if not scenes:
+        children = set(c for n in nodes for c in n.get("children", []))
+        scenes = g["scenes"] = [{"nodes": [i for i in range(len(nodes)) if i not in children]}]
+        g["scene"] = 0
+    for scene in scenes:
+        nodes.append({"name": "MeshyScale", "scale": [factor] * 3, "children": list(scene.get("nodes", []))})
+        scene["nodes"] = [len(nodes) - 1]
 
 
 def _drop_unused(doc):

@@ -1,0 +1,67 @@
+name: Release
+
+# Push a tag like v1.5.0 (matching every version in tools/check_versions.py) to build the
+# ready-to-install ZIPs and publish them as a GitHub release. The README's download links
+# point at releases/latest/download/<asset>, so they update automatically.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tag matches the package versions
+        run: |
+          python tools/check_versions.py
+          version=$(python -c "import json; print(json.load(open('unity/package.json'))['version'])")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match version $version" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Committed ZIPs are current
+        run: python tools/build_zips.py --check
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+
+      - name: Build release assets
+        run: python tools/build_zips.py --release dist
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          python - <<'PY'
+          import os, re
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          version = os.environ["VERSION"]
+          m = re.search(r"^## %s\b.*?$(.*?)(?=^## |\Z)" % re.escape(version), text, re.M | re.S)
+          notes = m.group(1).strip() if m else "See CHANGELOG.md."
+          notes += ("\n\n### Install\n"
+                    "- **Unity:** Package Manager > + > Add package from git URL > "
+                    "`https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity#%s`\n"
+                    "- **Blender:** Meshy-Importer-Blender.zip (Install from Disk)\n"
+                    "- **Godot:** unzip Meshy-Importer-Godot.zip into your project and enable the plugin\n"
+                    "- **Unreal:** unzip Meshy-Importer-Unreal.zip into your project's Plugins/ folder\n"
+                    % os.environ["GITHUB_REF_NAME"])
+          open("release-notes.md", "w", encoding="utf-8").write(notes)
+          PY
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "Meshy Importer $VERSION" \
+            --notes-file release-notes.md

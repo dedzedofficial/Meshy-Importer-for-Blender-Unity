@@ -43,6 +43,40 @@ def main():
                  [(i.name, tuple(i.size)) for i in imgs], obj.get("FISHHWB_Meshy_UV_BadCorners"),
                  obj.get("FISHHWB_Meshy_UV_RepairedCorners"), obj.get("FISHHWB_Meshy_UV_Regenerated")))
 
+    # Scale option scales the imported root about the origin.
+    def root_scales(**kw):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        assert bpy.ops.import_scene.meshy(filepath=fixtures[0], **kw) == {'FINISHED'}
+        return [o.scale[0] for o in bpy.data.objects if o.parent is None]
+    plain, doubled = root_scales(), root_scales(scale=2.0)
+    assert plain and all(abs(d - 2.0 * p) < 1e-6 for p, d in zip(plain, doubled)), (plain, doubled)
+
+    # The "Keep Original Data" preset turns UV repair off.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    assert bpy.ops.import_scene.meshy(filepath=fixtures[-1], preset='ORIGINAL') == {'FINISHED'}
+    obj = [o for o in bpy.data.objects if o.type == 'MESH'][0]
+    assert "FISHHWB_Meshy_UV_BadCorners" not in obj, dict(obj)
+
+    # A wrong file fails cleanly with the plain-language message.
+    import os
+    import tempfile
+    bad = os.path.join(tempfile.mkdtemp(), "page.meshy")
+    with open(bad, "wb") as f:
+        f.write(b"<!DOCTYPE html><html></html>")
+    try:
+        res = bpy.ops.import_scene.meshy(filepath=bad)
+    except RuntimeError as exc:  # operator errors are raised in background mode
+        assert "web page" in str(exc), exc
+    else:
+        assert res == {'CANCELLED'}, res
+    assert "web page" in addon._state["last_error"], addon._state
+
+    # Help/diagnostics operators and the Help submenu are registered.
+    text = addon.diagnostics()
+    assert "Meshy Importer: " + addon.VERSION in text and "web page" in text, text
+    assert hasattr(bpy.types, "TOPBAR_MT_meshy_help")
+    assert bpy.ops.wm.meshy_copy_diagnostics.poll()
+
     addon.unregister()
     print("BLENDER SMOKE TEST PASSED")
 

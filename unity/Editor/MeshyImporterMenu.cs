@@ -11,7 +11,7 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FallbackVersion = "1.4.1";
+        private const string FallbackVersion = "1.5.0";
 
         /// <summary>The installed package version, read from package.json so it never drifts.</summary>
         public static string Version
@@ -31,65 +31,119 @@ namespace FISHHWB.MeshyImporter.Editor
             }
         }
 
-        private static string FirstRunKey => "FISHHWB.MeshyImporter.FirstRunShown." + Version;
+        // Menu layout (priorities keep the groups separated):
+        //   Meshy Importer window, Reimport, Convert  -- everyday actions
+        //   Help/...                                   -- guides, diagnostics, bug report, updates
+        //   Advanced/...                               -- rarely needed
+        private const string Menu = "Tools/Meshy/";
+        private const int PriorityWindow = 0, PriorityReimport = 20, PriorityConvert = 40, PriorityHelp = 60, PriorityAdvanced = 80;
+
+        private const string WelcomedKey = "FISHHWB.MeshyImporter.Welcomed";
+        private const string LastVersionKey = "FISHHWB.MeshyImporter.LastVersion";
 
         [InitializeOnLoadMethod]
         private static void FirstRun()
         {
-            if (EditorPrefs.GetBool(FirstRunKey, false)) return;
-            EditorApplication.delayCall += ShowFirstRun;
+            if (Application.isBatchMode) return;
+            EditorApplication.delayCall += OnEditorReady;
         }
 
-        private static void ShowFirstRun()
+        /// <summary>The welcome dialog appears once per machine, on first install. Updates only
+        /// log a one-line "what's new" note instead of interrupting with a dialog again.</summary>
+        private static void OnEditorReady()
         {
-            if (EditorPrefs.GetBool(FirstRunKey, false)) return;
-            EditorPrefs.SetBool(FirstRunKey, true);
-            int choice = EditorUtility.DisplayDialogComplex(
-                "Meshy Importer for Blender & Unity",
-                "Installed successfully. Drop a real .meshy file anywhere under Assets and it will be reconstructed into a working model natively, with no other packages required.\n\n" +
-                "UnityGLTF is only used as an automatic fallback for the rare payload that uses a glTF extension the native importer does not implement yet.",
-                "Got it", "Documentation", "");
-            if (choice == 1) Application.OpenURL(RepositoryUrl);
+            string last = EditorPrefs.GetString(LastVersionKey, "");
+            bool welcomed = EditorPrefs.GetBool(WelcomedKey, false) || !string.IsNullOrEmpty(last) || SawLegacyWelcome();
+            EditorPrefs.SetString(LastVersionKey, Version);
+            EditorPrefs.SetBool(WelcomedKey, true);
+            if (!welcomed)
+                ShowWelcome();
+            else if (last != Version)
+                Debug.Log("Meshy Importer updated to " + Version + ". What's new: " + MeshySupport.ChangelogUrl);
         }
 
-        private const string RepositoryUrl =
+        // 1.3.x-1.4.1 stored one "shown" flag per version; treat any of them as already welcomed.
+        private static bool SawLegacyWelcome()
+        {
+            foreach (var v in new[] { "1.3.0", "1.3.1", "1.3.2", "1.3.3", "1.3.4", "1.3.5", "1.4.0", "1.4.1" })
+                if (EditorPrefs.HasKey("FISHHWB.MeshyImporter.FirstRunShown." + v)) return true;
+            return false;
+        }
+
+        private static void ShowWelcome()
+        {
+            int choice = EditorUtility.DisplayDialogComplex(
+                "Meshy Importer " + Version,
+                "Ready to go. Three steps:\n\n" +
+                "1. Get a .meshy file from the Meshy website (see the guide).\n" +
+                "2. Drop it anywhere under Assets.\n" +
+                "3. Select it to see its import settings and status.\n\n" +
+                "Everything else is in Tools > Meshy > Meshy Importer.",
+                "Got it", "How Do I Get a .meshy File?", "Open Meshy Importer");
+            if (choice == 1) Application.OpenURL(MeshySupport.GettingAFileUrl);
+            else if (choice == 2) MeshyImporterWindow.Open();
+        }
+
+        internal const string RepositoryUrl =
             "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity";
 
-        [MenuItem("Tools/Meshy/Show Welcome Again")]
-        public static void ShowWelcomeAgain()
+        [MenuItem(Menu + "Meshy Importer", false, PriorityWindow)]
+        public static void OpenWindow() => MeshyImporterWindow.Open();
+
+        [MenuItem(Menu + "Help/How Do I Get a .meshy File?", false, PriorityHelp)]
+        public static void OpenGettingAFile() => Application.OpenURL(MeshySupport.GettingAFileUrl);
+
+        [MenuItem(Menu + "Help/Troubleshooting", false, PriorityHelp + 1)]
+        public static void OpenTroubleshooting() => Application.OpenURL(MeshySupport.TroubleshootingUrl);
+
+        [MenuItem(Menu + "Help/Documentation", false, PriorityHelp + 2)]
+        public static void OpenDocs() => Application.OpenURL(RepositoryUrl + "/tree/main/unity");
+
+        [MenuItem(Menu + "Help/Validate Installation", false, PriorityHelp + 20)]
+        public static void ValidateInstallationMenu() => ValidateInstallation();
+
+        [MenuItem(Menu + "Help/Copy Diagnostics", false, PriorityHelp + 21)]
+        public static void CopyDiagnostics()
         {
-            EditorPrefs.DeleteKey(FirstRunKey);
-            ShowFirstRun();
+            MeshySupport.CopyDiagnostics();
+            EditorUtility.DisplayDialog("Meshy Importer", "Diagnostics copied to the clipboard. Paste them into your bug report or Discord message.", "OK");
         }
 
-        [MenuItem("Tools/Meshy/About Meshy Importer for Blender & Unity")]
+        [MenuItem(Menu + "Help/Report a Bug...", false, PriorityHelp + 22)]
+        public static void ReportBug() => MeshySupport.ReportBug();
+
+        [MenuItem(Menu + "Help/Check for Updates", false, PriorityHelp + 23)]
+        public static void CheckForUpdates() => MeshyUpdateCheck.CheckNow(true);
+
+        [MenuItem(Menu + "Help/Discord", false, PriorityHelp + 40)]
+        public static void OpenDiscord() => Application.OpenURL(MeshySupport.DiscordUrl);
+
+        [MenuItem(Menu + "Help/Support on Patreon", false, PriorityHelp + 41)]
+        public static void Donate() => Application.OpenURL(PatreonUrl);
+
+        [MenuItem(Menu + "Help/About", false, PriorityHelp + 42)]
         public static void About()
         {
             EditorUtility.DisplayDialog(
-                "Meshy Importer for Blender & Unity",
+                "Meshy Importer " + Version,
                 "Created by FISHHWB\n\n" +
-                "Meshy .meshy importer for Unity. Builds meshes, materials, textures, and\n" +
-                "skinning directly -- no UnityGLTF or glTFast dependency for the normal path.\n" +
-                "UnityGLTF is only installed automatically as a fallback for the rare file\n" +
-                "using a glTF extension the native importer does not implement yet.\n\n" +
+                "Imports Meshy .meshy files into Unity. Meshes, materials, textures and skinning are built " +
+                "directly, with no other packages needed.\n\n" +
                 RepositoryUrl + "\n\nSupport the project:\n" + PatreonUrl,
                 "OK");
         }
 
-        private const string PatreonUrl = "https://www.patreon.com/cw/DedZed";
+        [MenuItem(Menu + "Advanced/Show Welcome Again", false, PriorityAdvanced + 20)]
+        public static void ShowWelcomeAgain() => ShowWelcome();
 
-        [MenuItem("Tools/Meshy/Support / Donate on Patreon") ]
-        public static void Donate()
-        {
-            Application.OpenURL(PatreonUrl);
-        }
+        private const string PatreonUrl = "https://www.patreon.com/cw/DedZed";
 
         private const string UnityGLTFModernUrl =
             "https://github.com/KhronosGroup/UnityGLTF.git#release/2.21.0";
         private const string UnityGLTFLegacyUrl =
             "https://github.com/KhronosGroup/UnityGLTF.git#release/2.9.1-rc";
 
-        [MenuItem("Tools/Meshy/Install UnityGLTF (Optional Fallback)")]
+        [MenuItem(Menu + "Advanced/Install UnityGLTF (Optional Fallback)", false, PriorityAdvanced + 10)]
         public static void InstallUnityGLTF()
         {
             string unityVersion = Application.unityVersion;
@@ -125,22 +179,31 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorApplication.update += CheckRequest;
         }
 
-        [MenuItem("Tools/Meshy/Validate Installation")]
         public static void ValidateInstallation()
         {
-            string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
-            bool packagePresent = File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
             string message = "Meshy Importer " + Version + ": OK\n" +
                 "Unity: " + Application.unityVersion + "\n" +
-                "Native glTF builder: active (meshes/materials/textures/skinning built without UnityGLTF or glTFast)\n" +
-                "UnityGLTF fallback package: " + (packagePresent ? "installed" : "not installed (only needed for unsupported extensions)") + "\n" +
+                "Native importer: active (no other packages needed)\n" +
+                "UnityGLTF fallback: " + (MeshySupport.UnityGltfInstalled() ? "installed" : "not installed (only needed for rare files)") + "\n" +
                 ".meshy Asset Pipeline: " + (typeof(ScriptedImporter) != null ? "available" : "unavailable") + "\n" +
-                "Decoder: local/editor only\n" +
-                "Patreon: https://www.patreon.com/cw/DedZed";
-            EditorUtility.DisplayDialog("Meshy Importer Diagnostics", message, "OK");
+                "Decoder: local, editor only" +
+                (MeshyUpdateCheck.UpdateAvailable ? "\n\nUpdate available: " + MeshyUpdateCheck.LatestKnownVersion : "");
+            int choice = EditorUtility.DisplayDialogComplex("Meshy Importer Diagnostics", message, "OK", "Report a Bug...", "Copy Diagnostics");
+            if (choice == 1) MeshySupport.ReportBug();
+            else if (choice == 2) MeshySupport.CopyDiagnostics();
         }
 
-        [MenuItem("Tools/Meshy/Validate All .meshy In Assets")]
+        /// <summary>Every .meshy file under Assets, as "Assets/..." paths.</summary>
+        public static string[] FindMeshyAssets()
+        {
+            string[] files = Directory.GetFiles(Application.dataPath, "*.meshy", SearchOption.AllDirectories);
+            for (int i = 0; i < files.Length; i++)
+                files[i] = "Assets" + files[i].Substring(Application.dataPath.Length).Replace('\\', '/');
+            Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+            return files;
+        }
+
+        [MenuItem(Menu + "Advanced/Validate All .meshy In Assets", false, PriorityAdvanced)]
         public static void ValidateAll()
         {
             string[] files = Directory.GetFiles(Application.dataPath, "*.meshy", SearchOption.AllDirectories);
@@ -173,12 +236,12 @@ namespace FISHHWB.MeshyImporter.Editor
             }
             catch (Exception ex)
             {
-                if (showDialog) EditorUtility.DisplayDialog("Meshy Validation Failed", ex.Message, "OK");
+                if (showDialog) ShowError("Meshy Validation Failed", ex.Message);
                 return false;
             }
         }
 
-        [MenuItem("Tools/Meshy/Reimport Selected .meshy")]
+        [MenuItem(Menu + "Reimport Selected .meshy", false, PriorityReimport)]
         public static void ReimportSelected()
         {
             string path = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
@@ -190,7 +253,7 @@ namespace FISHHWB.MeshyImporter.Editor
             ReimportAsset(path);
         }
 
-        [MenuItem("Tools/Meshy/Reimport All .meshy In Assets")]
+        [MenuItem(Menu + "Reimport All .meshy In Assets", false, PriorityReimport + 1)]
         public static void ReimportAll()
         {
             string[] files = Directory.GetFiles(Application.dataPath, "*.meshy", SearchOption.AllDirectories);
@@ -203,12 +266,40 @@ namespace FISHHWB.MeshyImporter.Editor
             // KHR_texture_transform fix landing after already-imported assets were cached
             // under an older importer version) but a full Editor restart hasn't happened
             // yet to pick up the bumped ScriptedImporter version automatically.
-            foreach (string file in files)
+            var failed = new System.Collections.Generic.List<string>();
+            try
             {
-                string assetPath = "Assets" + file.Substring(Application.dataPath.Length).Replace('\\', '/');
-                ReimportAsset(assetPath);
+                for (int i = 0; i < files.Length; i++)
+                {
+                    string assetPath = "Assets" + files[i].Substring(Application.dataPath.Length).Replace('\\', '/');
+                    if (EditorUtility.DisplayCancelableProgressBar("Meshy Reimport", Path.GetFileName(assetPath), (float)i / files.Length))
+                        break;
+                    ReimportAsset(assetPath);
+                    var source = MeshySupport.LoadSource(assetPath);
+                    if (source != null && MeshySupport.IsFailure(source.Status)) failed.Add(Path.GetFileName(assetPath));
+                }
             }
-            EditorUtility.DisplayDialog("Meshy Reimport", $"Reimported {files.Length} .meshy asset(s).", "OK");
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+            string summary = $"Reimported {files.Length} .meshy asset(s).";
+            if (failed.Count > 0)
+                summary += $"\n\n{failed.Count} failed: {string.Join(", ", failed)}\nSelect one to see why in the Inspector.";
+            EditorUtility.DisplayDialog("Meshy Reimport", summary, "OK");
+        }
+
+        /// <summary>An error dialog with an "Open Help" button when the message carries a help link.</summary>
+        public static void ShowError(string title, string message)
+        {
+            string help = MeshySupport.HelpLink(message);
+            if (help == null)
+            {
+                EditorUtility.DisplayDialog(title, message, "OK");
+                return;
+            }
+            string text = message.Substring(0, message.IndexOf("Help: ", StringComparison.Ordinal)).TrimEnd();
+            if (!EditorUtility.DisplayDialog(title, text, "OK", "Open Help")) Application.OpenURL(help);
         }
 
         public static void ReimportAsset(string assetPath)
@@ -230,7 +321,7 @@ namespace FISHHWB.MeshyImporter.Editor
             }
         }
 
-        [MenuItem("Tools/Meshy/Convert .meshy to GLB...")]
+        [MenuItem(Menu + "Convert .meshy to GLB...", false, PriorityConvert)]
         public static void ConvertOne()
         {
             string path = EditorUtility.OpenFilePanel("Select Meshy model", "", "meshy");
@@ -253,11 +344,11 @@ namespace FISHHWB.MeshyImporter.Editor
             catch (Exception ex)
             {
                 Debug.LogException(ex);
-                EditorUtility.DisplayDialog("Meshy Importer", ex.Message, "OK");
+                ShowError("Meshy Importer", ex.Message);
             }
         }
 
-        [MenuItem("Tools/Meshy/Convert All .meshy In Assets")]
+        [MenuItem(Menu + "Convert All .meshy In Assets", false, PriorityConvert + 1)]
         public static void ConvertAll()
         {
             string[] files = Directory.GetFiles(Application.dataPath, "*.meshy",
@@ -294,11 +385,9 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             string fullPath = path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ? MeshyPaths.ProjectPath(path) : path;
             byte[] data = File.ReadAllBytes(fullPath);
-            if (data.Length < 32 + 8192 + 16)
-                throw new InvalidDataException("The .meshy file is too small.");
-
-            if (Encoding.ASCII.GetString(data, 0, 8) != "MESHY.AI")
-                throw new InvalidDataException("Missing MESHY.AI header.");
+            string problem = MeshyFileCheck.DescribeWrongFile(data);
+            if (problem != null)
+                throw new InvalidDataException(problem + " Help: " + MeshyFileCheck.HelpWrongFile);
 
             byte[] nonce = new byte[12];
             Buffer.BlockCopy(data, 10, nonce, 0, 12);
@@ -319,7 +408,8 @@ namespace FISHHWB.MeshyImporter.Editor
 
             if (glb.Length < 12 || Encoding.ASCII.GetString(glb, 0, 4) != "glTF")
                 throw new InvalidDataException(
-                    "Decoded data is not a GLB. Meshy may have changed its format.");
+                    "Meshy decryption produced an invalid GLB header. Meshy may have changed the .meshy format; " +
+                    "update the importer or report the file. Help: " + MeshyFileCheck.HelpFormatChanged);
 
             Buffer.BlockCopy(BitConverter.GetBytes((uint)glb.Length), 0, glb, 8, 4);
             return glb;

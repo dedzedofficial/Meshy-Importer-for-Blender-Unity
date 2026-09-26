@@ -7,7 +7,8 @@ body:
     id: importer
     attributes:
       label: Importer version
-      placeholder: "1.4.1 (Unity / Blender / Godot / Unreal)"
+      description: Tip - "Report a Bug..." in your engine's Meshy menu fills this form in for you.
+      placeholder: "1.5.0 (Unity / Blender / Godot / Unreal)"
     validations:
       required: true
   - type: input
@@ -27,7 +28,8 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Console/error output
+      label: Diagnostics and error output
+      description: Paste the output of "Copy Diagnostics" from your engine's Meshy menu, plus any console errors.
       render: text
   - type: textarea
     id: reproduction
