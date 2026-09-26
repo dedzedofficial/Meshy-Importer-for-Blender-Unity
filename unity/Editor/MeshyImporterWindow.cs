@@ -15,6 +15,7 @@ namespace FISHHWB.MeshyImporter.Editor
         private bool _showAdvanced;
         private readonly List<KeyValuePair<string, string>> _failures = new List<KeyValuePair<string, string>>();
         private int _fileCount;
+        private string _packageProblem;
 
         public static void Open()
         {
@@ -35,6 +36,7 @@ namespace FISHHWB.MeshyImporter.Editor
 
         private void Scan()
         {
+            _packageProblem = MeshyGltfPackages.Inspect().Problem;
             _failures.Clear();
             var files = MeshyImporterMenu.FindMeshyAssets();
             _fileCount = files.Length;
@@ -51,6 +53,7 @@ namespace FISHHWB.MeshyImporter.Editor
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
             EditorGUILayout.LabelField("Meshy Importer " + MeshyImporterMenu.Version, EditorStyles.boldLabel);
+            if (_packageProblem != null) EditorGUILayout.HelpBox(_packageProblem, MessageType.Error);
             if (MeshyUpdateCheck.UpdateAvailable)
             {
                 EditorGUILayout.HelpBox("Version " + MeshyUpdateCheck.LatestKnownVersion + " is available.", MessageType.Info);

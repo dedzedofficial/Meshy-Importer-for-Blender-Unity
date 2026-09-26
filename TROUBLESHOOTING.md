@@ -1,5 +1,9 @@
 # Troubleshooting
 
+## glTFast GUID conflicts / duplicate assemblies
+
+If both `com.atteneder.gltfast` and `com.unity.cloud.gltfast` are installed, keep only the variant required by your other packages. See [the 1.5.1 repair guide](UPGRADE_1.5.1.md), including the external repair utility for projects that cannot compile. Meshy itself requires neither.
+
 Every importer error says what went wrong and ends with a link to the matching section here. If this page doesn't help, use **Copy Diagnostics** in your engine's Meshy menu and paste it into a [bug report](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/issues/new?template=bug_report.yml) or on [Discord](https://discord.gg/vCcsnX4HQP). **Report a Bug** opens a pre-filled report for you.
 
 ## Wrong file errors

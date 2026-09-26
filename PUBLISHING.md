@@ -5,7 +5,7 @@ How to get each package into the places users look for it. The code side is read
 ## 1. GitHub Releases (every version)
 
 1. Finish `RELEASE_CHECKLIST.md` and merge to `main`.
-2. Tag and push: `git tag v1.5.0 && git push origin v1.5.0`.
+2. Tag and push: `git tag v1.5.1 && git push origin v1.5.1`.
 3. The **Release** workflow (`.github/workflows/release.yml`) checks that the tag matches every version, runs the tests, builds `Meshy-Importer-Blender.zip`, `Meshy-Importer-Unreal.zip` and `Meshy-Importer-Godot.zip`, and publishes the release with the matching `CHANGELOG.md` section as its notes.
 
 The README's download buttons use `releases/latest/download/<asset>`, so they point at the newest release automatically. **They return 404 until the first release is published.** The in-app update checks read the same "latest release", so they stay silent until then too.
@@ -15,7 +15,7 @@ The README's download buttons use `releases/latest/download/<asset>`, so they po
 Lets users install with `openupm add com.fishhwb.meshy-importer` or a scoped registry, and get updates in the Package Manager.
 
 1. Go to https://openupm.com/packages/add/ and enter the repository URL.
-2. The package is `com.fishhwb.meshy-importer` in the `unity/` folder. OpenUPM builds from git tags (`v1.5.0`), so every GitHub release above becomes an OpenUPM version.
+2. The package is `com.fishhwb.meshy-importer` in the `unity/` folder. OpenUPM builds from git tags (`v1.5.1`), so every GitHub release above becomes an OpenUPM version.
 3. Check the submitted package page after the first build. If the build can't find `package.json` in the subfolder, OpenUPM's docs describe the options for packages that aren't at the repository root.
 
 ## 3. Blender Extensions (extensions.blender.org)

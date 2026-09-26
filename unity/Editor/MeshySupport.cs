@@ -27,7 +27,7 @@ namespace FISHHWB.MeshyImporter.Editor
             try { pipeline = MeshyGltfBuilder.DetectPipeline().ToString(); }
             catch (Exception) { pipeline = "unknown"; }
             sb.AppendLine("Render pipeline: " + pipeline);
-            sb.AppendLine("UnityGLTF fallback installed: " + (UnityGltfInstalled() ? "yes" : "no"));
+            sb.AppendLine(MeshyGltfPackages.Inspect().Summary());
             string latest = MeshyUpdateCheck.LatestKnownVersion;
             if (!string.IsNullOrEmpty(latest)) sb.AppendLine("Latest release seen: " + latest);
 
@@ -108,12 +108,7 @@ namespace FISHHWB.MeshyImporter.Editor
 
         public static bool UnityGltfInstalled()
         {
-            try
-            {
-                string manifest = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Packages/manifest.json");
-                return File.Exists(manifest) && File.ReadAllText(manifest).IndexOf("org.khronos.unitygltf", StringComparison.OrdinalIgnoreCase) >= 0;
-            }
-            catch (Exception) { return false; }
+            return MeshyGltfPackages.Inspect().Has(MeshyGltfPackages.Khronos);
         }
 
         public static void CopyDiagnostics(string assetPath = null)

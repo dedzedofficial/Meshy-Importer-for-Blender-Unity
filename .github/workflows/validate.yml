@@ -81,6 +81,12 @@ jobs:
           dotnet-version: "8.0.x"
       - name: Type-check the Unity package against UnityEngine reference assemblies
         run: dotnet build tests/csharp/unity-compile -nologo
+      - name: glTF package diagnostics regression checks
+        run: dotnet run --project tests/csharp/gltf-packages
+      - name: Preflight and stable material-key regression checks
+        run: |
+          PYTHONPATH=tests python -c "from meshy_fixtures import build_glb; open('/tmp/meshy-preflight.glb', 'wb').write(build_glb())"
+          dotnet run --project tests/csharp/preflight -- /tmp/meshy-preflight.glb
       - name: C# UV repair matches the Python reference
         run: python tests/cross_check_uv.py --dotnet dotnet
       - name: C# wrong-file messages match the Python reference

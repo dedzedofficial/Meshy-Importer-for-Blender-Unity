@@ -16,7 +16,8 @@ namespace FISHHWB.MeshyImporter.Editor
     [CustomEditor(typeof(MeshyScriptedImporter))]
     public sealed class MeshySourceAssetEditor : ScriptedImporterEditor
     {
-        private SerializedProperty _scaleFactor, _generateColliders, _optimizeMeshes, _autoRepairUvs;
+        private SerializedProperty _scaleFactor, _generateColliders, _optimizeMeshes, _autoRepairUvs, _materialRemaps;
+        private bool _showPreflight;
 
         public override void OnEnable()
         {
@@ -25,6 +26,7 @@ namespace FISHHWB.MeshyImporter.Editor
             _generateColliders = serializedObject.FindProperty("generateColliders");
             _optimizeMeshes = serializedObject.FindProperty("optimizeMeshes");
             _autoRepairUvs = serializedObject.FindProperty("autoRepairUvs");
+            _materialRemaps = serializedObject.FindProperty("materialRemaps");
         }
 
         public override void OnInspectorGUI()
@@ -62,8 +64,31 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorGUILayout.PropertyField(_autoRepairUvs, new GUIContent("Auto-repair UVs"));
             EditorGUILayout.PropertyField(_generateColliders, new GUIContent("Generate Colliders"));
             EditorGUILayout.PropertyField(_optimizeMeshes, new GUIContent("Optimize Meshes"));
+            if (source != null) DrawMaterialOverrides(source, importer.assetPath);
+            EditorGUILayout.HelpBox("Applied settings and material choices stay with this model during reimport. Keep the source .meta file when moving it outside Unity.", MessageType.Info);
             serializedObject.ApplyModifiedProperties();
             ApplyRevertGUI();
+            if (GUILayout.Button("Restore Last Successful Settings"))
+            {
+                try
+                {
+                    var saved = MeshySettingsMemory.Load(importer.assetPath);
+                    if (EditorUtility.DisplayDialog("Restore Settings", "Replace current settings with the last successful native import settings and reimport?", "Restore", "Cancel"))
+                    {
+                        Undo.RecordObject(importer, "Restore Meshy import settings");
+                        importer.RestoreSettings(saved);
+                        EditorUtility.SetDirty(importer);
+                        importer.SaveAndReimport();
+                        serializedObject.Update();
+                        GUIUtility.ExitGUI();
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    if (ex is ExitGUIException) throw;
+                    MeshyImporterMenu.ShowError("Restore Settings", ex.Message);
+                }
+            }
 
             if (source != null)
             {
@@ -89,6 +114,20 @@ namespace FISHHWB.MeshyImporter.Editor
                     ? "None needed"
                     : $"{source.UvBadVertices:N0} vertex UV(s), {source.UvRegeneratedMeshes} mesh(es) regenerated");
                 EditorGUILayout.LabelField("Skinning", source.Skinned ? "Detected" : "None");
+                if (source.NativeSuccess && !MeshySupport.IsFailure(source.Status))
+                {
+                    EditorGUILayout.LabelField("Dimensions (Unity units)", source.Dimensions.ToString("F3"));
+                    EditorGUILayout.LabelField("Bones used", source.BoneCount.ToString());
+                    EditorGUILayout.LabelField("Largest imported texture", source.LargestTextureWidth + " × " + source.LargestTextureHeight);
+                    EditorGUILayout.LabelField("Texture memory estimate", FormatBytes(source.EstimatedTextureBytes));
+                    EditorGUILayout.LabelField("Uncompressed RGBA + mipmaps; generated textures only, excludes CPU copies and overrides.", EditorStyles.miniLabel);
+                    if (GUILayout.Button("Create Editable Copy (Prefab + Assets)")) MeshyEditableCopy.Create(importer.assetPath);
+                }
+                if (!string.IsNullOrEmpty(source.PreflightReport))
+                {
+                    _showPreflight = EditorGUILayout.Foldout(_showPreflight, "Preflight Report", true);
+                    if (_showPreflight) EditorGUILayout.HelpBox(source.PreflightReport, MessageType.Info);
+                }
             }
 
             EditorGUILayout.Space(6);
@@ -100,7 +139,60 @@ namespace FISHHWB.MeshyImporter.Editor
                     string full = MeshyPaths.ProjectPath(importer.assetPath);
                     if (File.Exists(full)) EditorUtility.RevealInFinder(full);
                 }
-                if (GUILayout.Button("Validate")) MeshyImporterMenu.ValidateOne(importer.assetPath);
+                if (GUILayout.Button("Run Preflight")) MeshyImporterMenu.ValidateOne(importer.assetPath);
+            }
+        }
+
+        private void DrawMaterialOverrides(MeshySourceAsset source, string assetPath)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Material Overrides", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Leave empty to use generated materials. Apply to save your choices.", EditorStyles.miniLabel);
+            var keys = source.MaterialKeys ?? new string[0];
+            var labels = source.MaterialLabels ?? new string[0];
+            for (int slot = 0; slot < keys.Length; slot++)
+            {
+                SerializedProperty entry = null;
+                for (int i = 0; i < _materialRemaps.arraySize; i++)
+                {
+                    var candidate = _materialRemaps.GetArrayElementAtIndex(i);
+                    if (candidate.FindPropertyRelative("key").stringValue == keys[slot]) { entry = candidate; break; }
+                }
+                var existing = entry == null ? null : entry.FindPropertyRelative("material").objectReferenceValue as Material;
+                string label = (slot < labels.Length ? labels[slot] : "Material") + " (" + (slot + 1) + ")";
+                var chosen = EditorGUILayout.ObjectField(label, existing, typeof(Material), false) as Material;
+                bool clearMissing = existing == null && entry != null && !string.IsNullOrEmpty(entry.FindPropertyRelative("materialGuid").stringValue)
+                    && GUILayout.Button("Use Generated Material for " + label);
+                if (chosen == existing && !clearMissing) continue;
+                string problem = MeshyScriptedImporter.MaterialProblem(chosen, assetPath);
+                if (problem != null) { EditorUtility.DisplayDialog("Material Override", problem, "OK"); continue; }
+                if (entry == null)
+                {
+                    int index = _materialRemaps.arraySize;
+                    _materialRemaps.arraySize++;
+                    entry = _materialRemaps.GetArrayElementAtIndex(index);
+                    entry.FindPropertyRelative("key").stringValue = keys[slot];
+                }
+                entry.FindPropertyRelative("material").objectReferenceValue = chosen;
+                string materialGuid = ""; long materialId = 0;
+                if (chosen != null) AssetDatabase.TryGetGUIDAndLocalFileIdentifier(chosen, out materialGuid, out materialId);
+                entry.FindPropertyRelative("materialGuid").stringValue = materialGuid;
+                entry.FindPropertyRelative("materialFileId").longValue = materialId;
+            }
+            int unmatched = 0;
+            for (int i = 0; i < _materialRemaps.arraySize; i++)
+            {
+                var entry = _materialRemaps.GetArrayElementAtIndex(i);
+                if (System.Array.IndexOf(keys, entry.FindPropertyRelative("key").stringValue) < 0 &&
+                    (entry.FindPropertyRelative("material").objectReferenceValue != null || !string.IsNullOrEmpty(entry.FindPropertyRelative("materialGuid").stringValue))) unmatched++;
+            }
+            if (unmatched > 0)
+            {
+                EditorGUILayout.HelpBox(unmatched + " saved material choice(s) no longer match this source. They are retained in case you restore the previous source model.", MessageType.Warning);
+                if (GUILayout.Button("Remove Unmatched Material Choices"))
+                    for (int i = _materialRemaps.arraySize - 1; i >= 0; i--)
+                        if (System.Array.IndexOf(keys, _materialRemaps.GetArrayElementAtIndex(i).FindPropertyRelative("key").stringValue) < 0)
+                            _materialRemaps.DeleteArrayElementAtIndex(i);
             }
         }
 

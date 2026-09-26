@@ -33,7 +33,7 @@ from meshy_core import support  # noqa: E402
 from meshy_core.normalize import NormalizeOptions, normalize_meshy_file  # noqa: E402
 from meshy_core.webp_vp8 import has_pillow  # noqa: E402
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 DEFAULT_DESTINATION = "/Game/Meshy"
 REPO_URL = support.REPO_URL
 _MENU_OWNER = "MeshyImporter"

@@ -19,7 +19,7 @@ namespace FISHHWB.MeshyImporter.Editor
     /// </summary>
     internal static class MeshyGltfBuilder
     {
-        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>
+        internal static readonly HashSet<string> SupportedExtensions = new HashSet<string>
         {
             "KHR_materials_emissive_strength",
             "KHR_texture_transform", // applied to UV0/UV1 at mesh-build time (see GetPrimaryUvTransform)
@@ -57,6 +57,8 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             public GameObject Root;
             public readonly List<UnityEngine.Object> SubAssets = new List<UnityEngine.Object>();
+            public readonly Dictionary<string, Material> MaterialSlots = new Dictionary<string, Material>();
+            public readonly List<GameObject> PrimitiveNodes = new List<GameObject>();
             public readonly Dictionary<int, GameObject> Nodes = new Dictionary<int, GameObject>();
             public int MeshCount;
             public int MaterialCount;
@@ -284,7 +286,11 @@ namespace FISHHWB.MeshyImporter.Editor
             }
 
             foreach (var t in ctx.TextureCache.Values) result.SubAssets.Add(t);
-            foreach (var m in ctx.MaterialCache.Values) result.SubAssets.Add(m);
+            foreach (var pair in ctx.MaterialCache)
+            {
+                result.SubAssets.Add(pair.Value);
+                result.MaterialSlots[MeshyPreflight.MaterialKey(ctx.Materials, pair.Key)] = pair.Value;
+            }
             result.TextureCount = ctx.TextureCache.Values.Select(t => t).Distinct().Count();
             result.MaterialCount = ctx.MaterialCache.Count;
             result.AssetType = DetectAssetType(ctx, result);
@@ -765,7 +771,11 @@ namespace FISHHWB.MeshyImporter.Editor
                     : GetOrBuildMaterial(ctx, -1);
 
                 GameObject target = primitives.Count == 1 ? node : new GameObject(mesh.name);
-                if (target != node) target.transform.SetParent(node.transform, false);
+                if (target != node)
+                {
+                    target.transform.SetParent(node.transform, false);
+                    result.PrimitiveNodes.Add(target);
+                }
 
                 if (boneWeights != null && bindPoses != null)
                 {
@@ -1236,7 +1246,11 @@ namespace FISHHWB.MeshyImporter.Editor
             else
             {
                 tex = new Texture2D(2, 2, TextureFormat.RGBA32, true, linear);
-                if (!tex.LoadImage(bytes, markNonReadable: false)) return null;
+                if (!tex.LoadImage(bytes, markNonReadable: false))
+                {
+                    UnityEngine.Object.DestroyImmediate(tex);
+                    return null;
+                }
             }
 
             if (MeshyMiniJson.Has(texDef, "sampler"))

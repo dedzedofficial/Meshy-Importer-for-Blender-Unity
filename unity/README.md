@@ -1,4 +1,8 @@
-# Meshy Importer for Unity — v1.5.0
+# Meshy Importer for Unity — v1.5.1
+
+**Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.1.md` in the release archive.
+
+**Upgrading with duplicate glTFast GUID errors?** Read `UPGRADE_1.5.1.md` in the release archive. Keep only one glTFast variant; updating Meshy alone does not remove project dependencies.
 
 ## What it does
 

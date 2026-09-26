@@ -1,6 +1,6 @@
 # Meshy Importer for Godot
 
-**Version 1.5.0 · Godot 4.2+**
+**Version 1.5.1 · Godot 4.2+**
 
 Import Meshy `.meshy` model payloads straight into Godot as scenes. Decoding happens locally in the editor, with no extra tools or downloads.
 

@@ -61,7 +61,7 @@ func _import_scene(path: String, flags: int, options: Dictionary) -> Object:
 		bad += int(st["bad_vertices"])
 		if st["regenerated"]:
 			regenerated += 1
-	scene.set_meta("meshy_importer_version", "1.5.0")
+	scene.set_meta("meshy_importer_version", "1.5.1")
 	scene.set_meta("meshy_uv_bad_vertices", bad)
 	scene.set_meta("meshy_uv_regenerated_meshes", regenerated)
 	if bad > 0:

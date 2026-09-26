@@ -20,6 +20,38 @@ namespace FISHHWB.MeshyImporter
         [SerializeField] private int uvRegeneratedMeshes;
         [SerializeField] private string renderPipeline;
 
+        [SerializeField] private string preflightReport;
+        [SerializeField] private bool nativeSuccess;
+        [SerializeField] private string successfulSettingsJson;
+        [SerializeField] private string[] materialKeys = new string[0];
+        [SerializeField] private string[] materialLabels = new string[0];
+        [SerializeField] private Material[] generatedMaterials = new Material[0];
+        [SerializeField] private Vector3 dimensions;
+        [SerializeField] private int boneCount;
+        [SerializeField] private long estimatedTextureBytes;
+        [SerializeField] private int largestTextureWidth, largestTextureHeight;
+        public string PreflightReport => preflightReport;
+        public bool NativeSuccess => nativeSuccess;
+        public string SuccessfulSettingsJson => successfulSettingsJson;
+        public string[] MaterialKeys => materialKeys;
+        public string[] MaterialLabels => materialLabels;
+        public Material[] GeneratedMaterials => generatedMaterials;
+        public Vector3 Dimensions => dimensions;
+        public int BoneCount => boneCount;
+        public long EstimatedTextureBytes => estimatedTextureBytes;
+        public int LargestTextureWidth => largestTextureWidth;
+        public int LargestTextureHeight => largestTextureHeight;
+        public void SetPreflight(string report) { preflightReport = report; }
+        public void SetMaterialCatalog(string[] keys, string[] labels) { materialKeys = keys; materialLabels = labels; }
+        public void SetWorkflow(string[] keys, string[] labels, Material[] originals, string settings,
+            Vector3 size, int bones, long textureBytes, int maxWidth, int maxHeight)
+        {
+            materialKeys = keys; materialLabels = labels; generatedMaterials = originals;
+            successfulSettingsJson = settings; dimensions = size; boneCount = bones;
+            estimatedTextureBytes = textureBytes; largestTextureWidth = maxWidth; largestTextureHeight = maxHeight;
+            nativeSuccess = true;
+        }
+
         public string SourcePath => sourcePath;
         /// <summary>The .glb written on the fallback path, or null/empty for a native import.</summary>
         public string GeneratedGlbPath => generatedGlbPath;

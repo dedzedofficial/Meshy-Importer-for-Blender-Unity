@@ -1,6 +1,10 @@
 # Meshy Importer for Blender & Unity
 
-**Version 1.5.0 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB**
+**Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.1.md` in the release archive.
+
+**Version 1.5.1 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB**
+
+**1.5.1 glTFast fixes:** [Install and repair an existing collision](UPGRADE_1.5.1.md) · [Validation limits](VALIDATION_1.5.1.md).
 
 [![Validate repository](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml/badge.svg)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

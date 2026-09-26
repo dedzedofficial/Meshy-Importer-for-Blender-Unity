@@ -49,7 +49,12 @@ namespace FISHHWB.MeshyImporter.Editor
             try
             {
                 if (File.Exists(StorePath))
-                    return JsonUtility.FromJson<Store>(File.ReadAllText(StorePath)) ?? new Store();
+                {
+                    var store = JsonUtility.FromJson<Store>(File.ReadAllText(StorePath)) ?? new Store();
+                    if (store.entries == null) store.entries = new List<Entry>();
+                    store.entries.RemoveAll(e => e == null || string.IsNullOrEmpty(e.path));
+                    return store;
+                }
             }
             catch (Exception ex)
             {
@@ -58,17 +63,31 @@ namespace FISHHWB.MeshyImporter.Editor
             return new Store();
         }
 
+        // Import workers are separate processes; a C# lock would not serialize them.
+        private static FileStream AcquireLock()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(StorePath));
+            for (int attempt = 0; ; attempt++)
+            {
+                try { return new FileStream(StorePath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+                catch (IOException)
+                {
+                    if (attempt >= 100) throw;
+                    System.Threading.Thread.Sleep(20);
+                }
+            }
+        }
+
         private static void Save(Store store)
         {
+            string temporary = StorePath + ".tmp-" + Guid.NewGuid().ToString("N");
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(StorePath));
-                File.WriteAllText(StorePath, JsonUtility.ToJson(store, true));
+                File.WriteAllText(temporary, JsonUtility.ToJson(store, true));
+                if (File.Exists(StorePath)) File.Replace(temporary, StorePath, null);
+                else File.Move(temporary, StorePath);
             }
-            catch (Exception ex)
-            {
-                Debug.LogWarning("Meshy Importer: could not write the generated-GLB registry: " + ex.Message);
-            }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }
 
         private static string Normalize(string assetPath) => assetPath.Replace('\\', '/');
@@ -79,44 +98,68 @@ namespace FISHHWB.MeshyImporter.Editor
                 return BitConverter.ToString(sha.ComputeHash(data)).Replace("-", "");
         }
 
-        /// <summary>True when the file at assetPath is one this importer wrote and has not been changed since.</summary>
-        public static bool IsGenerated(string assetPath)
+        internal static void Forget(string assetPath)
+        {
+            using (AcquireLock())
+            {
+                var store = Load();
+                if (store.entries.RemoveAll(e => e.path == Normalize(assetPath)) > 0) Save(store);
+            }
+        }
+
+        private static bool IsGenerated(string assetPath, Store store)
         {
             string full = MeshyPaths.ProjectPath(assetPath);
             if (!File.Exists(full)) return false;
-            var entry = Load().entries.Find(e => e.path == Normalize(assetPath));
-            if (entry == null) return false;
-            var info = new FileInfo(full);
-            if (info.Length != entry.size) return false;
+            var entry = store.entries.Find(e => e.path == Normalize(assetPath));
+            if (entry == null || new FileInfo(full).Length != entry.size) return false;
             return Hash(File.ReadAllBytes(full)) == entry.sha256;
         }
 
-        /// <summary>Write a generated GLB and record it. Never overwrites a file the importer did not write.</summary>
-        public static bool TryWrite(string assetPath, byte[] data)
+        public static bool IsGenerated(string assetPath)
         {
-            string full = MeshyPaths.ProjectPath(assetPath);
-            if (File.Exists(full) && !IsGenerated(assetPath)) return false;
-            File.WriteAllBytes(full, data);
-            var store = Load();
-            store.entries.RemoveAll(e => e.path == Normalize(assetPath));
-            store.entries.Add(new Entry { path = Normalize(assetPath), size = data.LongLength, sha256 = Hash(data) });
-            Save(store);
-            return true;
+            using (AcquireLock()) return IsGenerated(assetPath, Load());
         }
 
-        /// <summary>Delete assetPath (and its .meta) only if the importer generated it. Plain file IO only.</summary>
-        public static bool DeleteIfGenerated(string assetPath)
+        /// <summary>Only overwrites a file with matching recorded ownership and content.</summary>
+        public static bool TryWrite(string assetPath, byte[] data)
         {
-            if (!IsGenerated(assetPath)) return false;
-            string full = MeshyPaths.ProjectPath(assetPath);
-            try
+            using (AcquireLock())
             {
-                File.Delete(full);
-                if (File.Exists(full + ".meta")) File.Delete(full + ".meta");
                 var store = Load();
+                string full = MeshyPaths.ProjectPath(assetPath);
+                bool exists = File.Exists(full);
+                if (exists && !IsGenerated(assetPath, store)) return false;
+                if (!exists && File.Exists(full + ".meta")) return false;
+                // Avoid rewriting identical data and triggering needless asset refreshes.
+                string hash = Hash(data);
+                var previous = store.entries.Find(e => e.path == Normalize(assetPath));
+                if (exists && previous != null && previous.sha256 == hash) return true;
+                using (var stream = new FileStream(full, exists ? FileMode.Create : FileMode.CreateNew, FileAccess.Write))
+                    stream.Write(data, 0, data.Length);
                 store.entries.RemoveAll(e => e.path == Normalize(assetPath));
+                store.entries.Add(new Entry { path = Normalize(assetPath), size = data.LongLength, sha256 = hash });
                 Save(store);
                 return true;
+            }
+        }
+
+        /// <summary>Plain disk IO; never removes an untracked or user-edited GLB.</summary>
+        public static bool DeleteIfGenerated(string assetPath)
+        {
+            try
+            {
+                using (AcquireLock())
+                {
+                    var store = Load();
+                    if (!IsGenerated(assetPath, store)) return false;
+                    string full = MeshyPaths.ProjectPath(assetPath);
+                    File.Delete(full);
+                    if (File.Exists(full + ".meta")) File.Delete(full + ".meta");
+                    store.entries.RemoveAll(e => e.path == Normalize(assetPath));
+                    Save(store);
+                    return true;
+                }
             }
             catch (Exception ex)
             {

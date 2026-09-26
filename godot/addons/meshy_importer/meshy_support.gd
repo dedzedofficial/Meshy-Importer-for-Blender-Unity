@@ -3,7 +3,7 @@ extends RefCounted
 ## Plain helpers for plugin.gd (version compare, diagnostics text). Kept out of the
 ## EditorPlugin script so tests can load them without the editor.
 
-const VERSION := "1.5.0"
+const VERSION := "1.5.1"
 
 
 static func diagnostics() -> String:

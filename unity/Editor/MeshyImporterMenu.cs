@@ -11,7 +11,8 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FallbackVersion = "1.5.0";
+        private const string FallbackVersion = "1.5.1";
+        private static bool installingFallback;
 
         /// <summary>The installed package version, read from package.json so it never drifts.</summary>
         public static string Version
@@ -52,6 +53,8 @@ namespace FISHHWB.MeshyImporter.Editor
         /// log a one-line "what's new" note instead of interrupting with a dialog again.</summary>
         private static void OnEditorReady()
         {
+            var packages = MeshyGltfPackages.Inspect();
+            if (packages.Problem != null) Debug.LogWarning("Meshy Importer: " + packages.Problem);
             string last = EditorPrefs.GetString(LastVersionKey, "");
             bool welcomed = EditorPrefs.GetBool(WelcomedKey, false) || !string.IsNullOrEmpty(last) || SawLegacyWelcome();
             EditorPrefs.SetString(LastVersionKey, Version);
@@ -146,19 +149,30 @@ namespace FISHHWB.MeshyImporter.Editor
         [MenuItem(Menu + "Advanced/Install UnityGLTF (Optional Fallback)", false, PriorityAdvanced + 10)]
         public static void InstallUnityGLTF()
         {
+            if (installingFallback) return;
+            var packages = MeshyGltfPackages.Inspect();
+            if (packages.Problem != null || packages.HasFallback)
+            {
+                EditorUtility.DisplayDialog("glTF Fallback Packages",
+                    packages.Problem ?? "A glTF importer is already configured. Use the existing importer for GLB fallback files.\n\n" + packages.Summary(), "OK");
+                return;
+            }
             string unityVersion = Application.unityVersion;
             string versionPrefix = unityVersion.Length >= 6 ? unityVersion.Substring(0, 6) : unityVersion;
             bool legacy2020 = versionPrefix.StartsWith("2020.3", StringComparison.Ordinal);
             string selectedVersion = legacy2020 ? "2.9.1-rc" : "2.21.0";
             string selectedUrl = legacy2020 ? UnityGLTFLegacyUrl : UnityGLTFModernUrl;
 
-            var request = Client.Add(selectedUrl);
+            AddRequest request;
+            try { request = Client.Add(selectedUrl); installingFallback = true; }
+            catch (Exception ex) { ShowError("UnityGLTF Installation Failed", ex.Message); return; }
             void CheckRequest()
             {
                 if (!request.IsCompleted)
                     return;
 
                 EditorApplication.update -= CheckRequest;
+                installingFallback = false;
 
                 if (request.Status == StatusCode.Success)
                 {
@@ -181,10 +195,11 @@ namespace FISHHWB.MeshyImporter.Editor
 
         public static void ValidateInstallation()
         {
-            string message = "Meshy Importer " + Version + ": OK\n" +
+            var packages = MeshyGltfPackages.Inspect();
+            string message = "Meshy Importer " + Version + (packages.Problem == null ? ": OK\n" : ": package issue detected\n") +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Native importer: active (no other packages needed)\n" +
-                "UnityGLTF fallback: " + (MeshySupport.UnityGltfInstalled() ? "installed" : "not installed (only needed for rare files)") + "\n" +
+                packages.Summary() + "\n" +
                 ".meshy Asset Pipeline: " + (typeof(ScriptedImporter) != null ? "available" : "unavailable") + "\n" +
                 "Decoder: local, editor only" +
                 (MeshyUpdateCheck.UpdateAvailable ? "\n\nUpdate available: " + MeshyUpdateCheck.LatestKnownVersion : "");
@@ -230,8 +245,8 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             try
             {
-                DecodeFileForEditor(assetPath);
-                if (showDialog) EditorUtility.DisplayDialog("Meshy Validation", "Valid .meshy payload. The decoder produced a valid GLB.", "OK");
+                var report = MeshyPreflight.Scan(DecodeFileForEditor(assetPath), MeshyGltfBuilder.SupportedExtensions);
+                if (showDialog) EditorUtility.DisplayDialog("Meshy Preflight", report.Text, "OK");
                 return true;
             }
             catch (Exception ex)
@@ -267,6 +282,7 @@ namespace FISHHWB.MeshyImporter.Editor
             // under an older importer version) but a full Editor restart hasn't happened
             // yet to pick up the bumped ScriptedImporter version automatically.
             var failed = new System.Collections.Generic.List<string>();
+            int processed = 0;
             try
             {
                 for (int i = 0; i < files.Length; i++)
@@ -275,6 +291,7 @@ namespace FISHHWB.MeshyImporter.Editor
                     if (EditorUtility.DisplayCancelableProgressBar("Meshy Reimport", Path.GetFileName(assetPath), (float)i / files.Length))
                         break;
                     ReimportAsset(assetPath);
+                    processed++;
                     var source = MeshySupport.LoadSource(assetPath);
                     if (source != null && MeshySupport.IsFailure(source.Status)) failed.Add(Path.GetFileName(assetPath));
                 }
@@ -283,7 +300,7 @@ namespace FISHHWB.MeshyImporter.Editor
             {
                 EditorUtility.ClearProgressBar();
             }
-            string summary = $"Reimported {files.Length} .meshy asset(s).";
+            string summary = $"Processed {processed} of {files.Length} .meshy asset(s).";
             if (failed.Count > 0)
                 summary += $"\n\n{failed.Count} failed: {string.Join(", ", failed)}\nSelect one to see why in the Inspector.";
             EditorUtility.DisplayDialog("Meshy Reimport", summary, "OK");
@@ -330,15 +347,14 @@ namespace FISHHWB.MeshyImporter.Editor
 
             try
             {
-                string output = Path.ChangeExtension(path, ".glb");
                 byte[] glb = DecodeFileForEditor(path);
-                File.WriteAllBytes(output, glb);
+                string output = WriteConvertedGlb(path, glb);
                 AssetDatabase.Refresh();
                 Debug.Log($"Meshy import complete: {output}");
                 EditorUtility.DisplayDialog(
                     "Meshy Importer",
                     "Converted successfully.\n\n" + output +
-                    "\n\nUnity will now import the GLB using your installed glTF importer.",
+                    "\n\nGLBs inside Assets need a working external glTF importer. Files outside Assets are exports only.",
                     "OK");
             }
             catch (Exception ex)
@@ -366,7 +382,8 @@ namespace FISHHWB.MeshyImporter.Editor
             {
                 try
                 {
-                    File.WriteAllBytes(Path.ChangeExtension(file, ".glb"), DecodeFileForEditor(file));
+                    string output = WriteConvertedGlb(file, DecodeFileForEditor(file));
+                    Debug.Log("Meshy Importer: exported " + output);
                     converted++;
                 }
                 catch (Exception ex)
@@ -379,6 +396,23 @@ namespace FISHHWB.MeshyImporter.Editor
             EditorUtility.DisplayDialog("Meshy Importer",
                 $"Converted {converted} of {files.Length} .meshy files.",
                 "OK");
+        }
+
+        private static string WriteConvertedGlb(string sourcePath, byte[] glb)
+        {
+            string desired = Path.ChangeExtension(sourcePath, ".glb");
+            string output = desired;
+            int suffix = 1;
+            while (File.Exists(output) || File.Exists(output + ".meta"))
+                output = Path.ChangeExtension(desired, null) + "_export_" + suffix++ + ".glb";
+            // A manual export must never inherit ownership from an old fallback file.
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName + Path.DirectorySeparatorChar;
+            string full = Path.GetFullPath(output);
+            if (full.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+                MeshyGeneratedGlbRegistry.Forget(full.Substring(projectRoot.Length));
+            using (var stream = new FileStream(output, FileMode.CreateNew, FileAccess.Write))
+                stream.Write(glb, 0, glb.Length);
+            return output;
         }
 
         public static byte[] DecodeFileForEditor(string path)

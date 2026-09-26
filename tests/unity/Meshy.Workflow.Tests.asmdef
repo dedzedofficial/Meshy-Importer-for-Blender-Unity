@@ -1,0 +1,6 @@
+{
+  "name": "Meshy.Workflow.Tests",
+  "references": ["FISHHWB.MeshyImporter", "FISHHWB.MeshyImporter.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

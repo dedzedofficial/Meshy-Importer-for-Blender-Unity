@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.5.1 — 2026-09-26
+
+Unity/glTFast maintenance and workflow release (version remains 1.5.1).
+
+- Add persistent material overrides keyed by unique source name, with explicit
+  slot matching for duplicate/unnamed materials and missing-material recovery.
+- Create independent editable prefab, mesh, texture and material copies under
+  Assets/MeshyCustom, without overwriting existing custom assets.
+- Remember last-successful native import settings by source GUID and offer restore.
+- Scan container, buffer/accessor ranges and node graphs before building models;
+  route unsupported animation/morph/sparse/topology features to the GLB fallback.
+- Add dimensions, bone counts, texture dimensions and an explicitly labelled
+  uncompressed texture-memory estimate to the Inspector summary.
+- Add executable C# preflight regressions and opt-in Unity EditMode workflow tests.
+- Increase internal import-cache revision to 9 while keeping release version 1.5.1.
+
+ Blender, Godot and Unreal retain their existing
+behavior; version metadata and bundled archives are synchronized.
+
+- Detect original + Unity glTFast package collisions through manifest, lock and
+  embedded package data. Surface the problem at startup, in the importer window,
+  installation validation and copied diagnostics.
+- Provide an external, preview-first glTFast repair utility with dependency checks,
+  configuration backups and guarded manifest-only updates.
+- Detect indirect UnityGLTF installs; avoid redundant optional fallback installs
+  and repeated concurrent install requests.
+- Register repeated-name subassets with unique identifiers and register primitive
+  child GameObjects. Initially bumped the importer cache to 8; the workflow update uses 9.
+- Give fallback/failed `.meshy` imports an explicit metadata main object. Report
+  missing/conflicting fallback packages; queue GLB imports from the main-editor
+  postprocessor instead of an import worker's delay callback.
+- Clean both generated companion naming variants and protect user-edited files.
+  Serialize fallback registry access across import workers; write registry data
+  atomically, skip unchanged GLBs and handle null registry lists.
+- Preserve existing GLB exports and their meta files, write new numbered exports
+  using exclusive creation, and clear obsolete fallback ownership for manual exports.
+- Report actual processed counts when bulk reimport is cancelled.
+- Release failed image-load textures instead of leaving them allocated.
+- Add repair regression tests and a C# package-diagnostics test executable.
+
+See UPGRADE_1.5.1.md for the separate project repair step and VALIDATION_1.5.1.md
+for the tests run and the Unity-runtime verification still required.
+
 ## 1.5.0 — easier to use: clear errors, one-stop menus, presets, diagnostics
 
 ### Every engine

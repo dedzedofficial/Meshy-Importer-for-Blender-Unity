@@ -1,6 +1,6 @@
 # Compatibility
 
-All hosts ship as version **1.5.0** and decode `.meshy` payloads locally.
+All hosts ship as version **1.5.1** and decode `.meshy` payloads locally.
 
 ## Unity
 

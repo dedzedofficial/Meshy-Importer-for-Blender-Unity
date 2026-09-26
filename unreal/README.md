@@ -1,6 +1,6 @@
 # Meshy Importer for Unreal Engine
 
-**Version 1.5.0 · Unreal Engine 5.3+ · Editor only**
+**Version 1.5.1 · Unreal Engine 5.3+ · Editor only**
 
 Import Meshy `.meshy` model payloads into Unreal Engine. Decoding happens locally in the editor's Python and needs no C++ compile.
 
