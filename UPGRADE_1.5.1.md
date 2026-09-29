@@ -76,8 +76,7 @@ project's `Packages` folder. Reopening Unity will restore the old configuration
 5. Wait for package resolution and compilation. Use **Tools > Meshy > Help >
    Validate Installation**. Then **Tools > Meshy > Reimport All .meshy In Assets**.
 
-This is a local release archive; it has not been pushed or tagged on GitHub. An
-unqualified Git URL may still install the previous repository version.
+For a Git install, add `https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity` in Package Manager. Use a version tag if you need to pin a published release.
 
 Ordinary `.meshy` imports work without either external importer. Unsupported native
 features generate a companion GLB, whose external import status must be checked in
@@ -100,9 +99,9 @@ suggested by Meshy's install action.
 
 ## Validation in this delivery
 
-See `VALIDATION_1.5.1.md` for checks actually run. The Unity package now passes a
-standalone C# 8 type-check and executable preflight checks, but Unity Editor imports,
-rendering and Inspector actions still need testing in your project.
+The repository validation workflow runs a C# type-check and executable preflight
+checks, but Unity Editor imports, rendering and Inspector actions still need
+testing in your project.
 
 ## New workflow features (same 1.5.1 version)
 
