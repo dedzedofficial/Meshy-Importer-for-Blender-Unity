@@ -2,7 +2,7 @@
 
 **Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.1.md` in the release archive.
 
-**Version 1.5.1 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB**
+**Version 1.5.1 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB | Ded Zed**
 
 **1.5.1 glTFast fixes:** [Install and repair an existing collision](UPGRADE_1.5.1.md) · [Validation limits](VALIDATION_1.5.1.md).
 
