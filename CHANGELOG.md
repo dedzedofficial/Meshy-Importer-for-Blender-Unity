@@ -40,8 +40,8 @@ behavior; version metadata and bundled archives are synchronized.
 - Release failed image-load textures instead of leaving them allocated.
 - Add repair regression tests and a C# package-diagnostics test executable.
 
-See UPGRADE_1.5.1.md for the separate project repair step and VALIDATION_1.5.1.md
-for the tests run and the Unity-runtime verification still required.
+See UPGRADE_1.5.1.md for the separate project repair step. The validation
+workflow covers automated checks; Unity runtime verification is still required.
 
 ## 1.5.0 — easier to use: clear errors, one-stop menus, presets, diagnostics
 
@@ -354,6 +354,6 @@ All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1
 ### Documentation / discoverability
 - Added `GETTING_A_MESHY_FILE.md` with the Chrome DevTools Network workflow.
 - Added `TROUBLESHOOTING.md`.
-- Expanded `SEO_KEYWORDS.md` and Unity package keywords.
+- Expanded Unity package keywords.
 - Added clearer compatibility and dependency guidance.
 - Kept version **1.1.0**.
