@@ -4,7 +4,7 @@
 
 **Version 1.5.1 (Unity, Blender, Godot and Unreal) — created and maintained by FISHHWB | Ded Zed**
 
-**1.5.1 glTFast fixes:** [Install and repair an existing collision](UPGRADE_1.5.1.md) · [Validation limits](VALIDATION_1.5.1.md).
+**1.5.1 glTFast fixes:** [Install and repair an existing collision](UPGRADE_1.5.1.md).
 
 [![Validate repository](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml/badge.svg)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/actions/workflows/validate.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -151,10 +151,6 @@ Discord: https://discord.gg/vCcsnX4HQP
 ## 🧰 Repository development
 
 GitHub Actions runs the Python test-suite (Python 3.9 and 3.12), a Unity compile check against the real UnityEngine reference assemblies, C#/GDScript/Python parity checks (UV repair and wrong-file messages), and headless Blender and Godot imports of a synthetic `.meshy` payload. It also checks that versions agree across every host and that the committed ZIPs match their sources. Pushing a `v*` tag builds the release ZIPs and publishes a GitHub release. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`PUBLISHING.md`](PUBLISHING.md).
-
-## 🔎 Find this project
-
-Useful search terms include **Meshy Importer**, **Meshy AI importer**, **.meshy Unity importer**, **.meshy Blender importer**, **.meshy Godot importer**, **.meshy Unreal importer**, **Meshy to Unity**, **Meshy to Blender**, **Meshy to Godot**, **Meshy to Unreal**, and **Meshy 3D model importer**. See **SEO_KEYWORDS.md**.
 
 ## Disclaimer
 
