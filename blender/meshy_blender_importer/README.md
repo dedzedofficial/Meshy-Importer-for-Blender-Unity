@@ -74,7 +74,7 @@ The fixed AES-256 key used by the current format is the literal 32-byte prefix d
 
 ## Support
 
-Created by FISHHWB.
+Created by FISHHWB | Ded Zed.
 
 Repository:
 https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity

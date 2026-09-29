@@ -129,7 +129,7 @@ namespace FISHHWB.MeshyImporter.Editor
         {
             EditorUtility.DisplayDialog(
                 "Meshy Importer " + Version,
-                "Created by FISHHWB\n\n" +
+                "Created by FISHHWB | Ded Zed\n\n" +
                 "Imports Meshy .meshy files into Unity. Meshes, materials, textures and skinning are built " +
                 "directly, with no other packages needed.\n\n" +
                 RepositoryUrl + "\n\nSupport the project:\n" + PatreonUrl,
