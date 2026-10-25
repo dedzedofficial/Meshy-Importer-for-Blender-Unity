@@ -1,0 +1,41 @@
+name: Prepare v1.5.2 sources and archives (temporary)
+on:
+  push:
+    branches: [release/v1.5.2-download-docs]
+    paths: ['.github/workflows/prepare-v1.5.2.yml']
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply version and documentation migration
+        run: python tools/prepare_1_5_2.py
+      - name: Rebuild v1.5.2 committed ZIPs
+        run: python tools/build_zips.py
+      - name: Verify version, ZIPs, docs, Python and JS
+        run: |
+          python tools/check_versions.py
+          python tools/build_zips.py --check
+          python -m unittest discover -s tests -q
+          node --test tests/browser-extension.test.cjs
+          python - <<'PY'
+          from pathlib import Path
+          for p in Path('.').rglob('*.md'):
+              assert '\u2014' not in p.read_text(encoding='utf-8'), p
+          assert not Path('WORKFLOW_1.5.1.md').exists()
+          assert not Path('UPGRADE_1.5.1.md').exists()
+          assert not Path('blender/README.md').exists()
+          PY
+      - name: Commit prepared release sources
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m 'Prepare v1.5.2 sources and rebuild all installers'
+          git push origin HEAD:refs/heads/release/v1.5.2-download-docs
