@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FISHHWB Meshy Asset Capture",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Locally save verified Meshy models already loaded by your browser.",
   "minimum_chrome_version": "111",
   "permissions": [

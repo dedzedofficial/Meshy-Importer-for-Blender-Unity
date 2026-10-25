@@ -1,6 +1,6 @@
-# Meshy Importer for Blender & Unity — Blender
+# Meshy Importer for Blender & Unity : Blender
 
-**Version 1.5.1**
+**Version 1.5.2**
 
 This Blender extension adds:
 
@@ -52,7 +52,7 @@ Once a day, if Blender's **Allow Online Access** (Preferences → System → Net
 
 ## Compatibility
 
-- Blender 4.2+ as an extension; Blender 3.6–4.1 as a legacy add-on.
+- Blender 4.2+ as an extension; Blender 3.6-4.1 as a legacy add-on.
 - `EXT_meshopt_compression` is decoded by the add-on, so any supported Blender version can import current Meshy files.
 - Blender versions before 4.0 get WebP textures converted to PNG automatically.
 
@@ -63,8 +63,8 @@ The decoder runs locally. The `.meshy` model is not uploaded by this add-on. The
 ## Format
 
 The current reverse-engineered format describes:
-- `MESHY.AI` magic at bytes 0–7
-- 12-byte nonce at bytes 10–21
+- `MESHY.AI` magic at bytes 0-7
+- 12-byte nonce at bytes 10-21
 - 8192-byte AES-CTR encrypted prefix
 - 16-byte authentication/tag area
 - plaintext remainder

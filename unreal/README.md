@@ -2,7 +2,7 @@
 
 **Local-first privacy:** Model files are decoded/imported on your machine and are not uploaded to FISHHWB. The separate [Chrome/Edge browser extension](../browser/README.md) can save verified `.meshy` files as the Meshy website loads them. Meshy's website itself still uses Meshy's servers, and the importer's optional public GitHub update check can be disabled in settings.
 
-**Version 1.5.1 · Unreal Engine 5.3+ · Editor only**
+**Version 1.5.2 · Unreal Engine 5.3+ · Editor only**
 
 Import Meshy `.meshy` model payloads into Unreal Engine. Decoding happens locally in the editor's Python and needs no C++ compile.
 
@@ -33,7 +33,7 @@ For every file, the plugin:
 
 ### Speed
 
-WebP textures are decoded in pure Python unless [Pillow](https://pypi.org/project/Pillow/) is installed in the editor's Python. A 2K texture takes around 10–20 seconds without Pillow and well under a second with it. To install Pillow, run this from the engine's `Engine/Binaries/ThirdParty/Python3/<platform>/` folder:
+WebP textures are decoded in pure Python unless [Pillow](https://pypi.org/project/Pillow/) is installed in the editor's Python. A 2K texture takes around 10-20 seconds without Pillow and well under a second with it. To install Pillow, run this from the engine's `Engine/Binaries/ThirdParty/Python3/<platform>/` folder:
 
 ```text
 python -m pip install pillow

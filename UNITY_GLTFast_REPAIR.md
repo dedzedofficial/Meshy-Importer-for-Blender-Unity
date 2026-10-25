@@ -1,11 +1,11 @@
-# Meshy Importer 1.5.1 — install and fix the glTFast conflict
+# Unity glTFast dependency conflict repair
 
 Your screenshot shows the original **com.atteneder.gltfast** and Unity's
 **com.unity.cloud.gltfast** installed at the same time. They contain matching asset
 GUIDs. Both must not remain installed together. Changing GUIDs or deleting only the
 package cache does not resolve the dependency configuration.
 
-Meshy 1.5.1 has **no glTFast or UnityGLTF package dependency**. Updating Meshy adds
+Meshy 1.5.2 has **no glTFast or UnityGLTF package dependency**. Updating Meshy adds
 checks and import fixes, but cannot remove packages from a Unity project that was
 not supplied. Resolve the existing duplicate separately as below.
 
@@ -63,7 +63,7 @@ To undo a repair, close Unity and copy both backed-up JSON files back into the
 project's `Packages` folder. Reopening Unity will restore the old configuration
 (including the old collision if both variants were there).
 
-## 2. Install this local 1.5.1 build
+## 2. Install this local 1.5.2 build
 
 1. Extract the download to a stable location outside your Unity project's `Assets`.
 2. In Unity Package Manager, select **+ > Add package from disk** and choose
@@ -103,9 +103,9 @@ The repository validation workflow runs a C# type-check and executable preflight
 checks, but Unity Editor imports, rendering and Inspector actions still need
 testing in your project.
 
-## New workflow features (same 1.5.1 version)
+## Advanced workflows
 
-Read `WORKFLOW_1.5.1.md` for material overrides, editable asset copies, remembered
+Read `WORKFLOW_1.5.2.md` for material overrides, editable asset copies, remembered
 settings, preflight scanning and expanded import summaries. Install this revised
-archive over the earlier 1.5.1 package. The internal cache revision is now 9, so
+archive over the earlier 1.5.2 package. The internal cache revision is now 9, so
 Unity will rebuild cached `.meshy` imports after the update.

@@ -45,6 +45,9 @@ jobs:
       - name: Versions agree across every host
         run: python tools/check_versions.py
 
+      - name: Documentation consistency and release download link
+        run: python tools/audit_docs.py
+
       - name: Committed ZIPs match their sources
         run: python tools/build_zips.py --check
 

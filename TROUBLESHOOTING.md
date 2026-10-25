@@ -2,7 +2,7 @@
 
 ## glTFast GUID conflicts / duplicate assemblies
 
-If both `com.atteneder.gltfast` and `com.unity.cloud.gltfast` are installed, keep only the variant required by your other packages. See [the 1.5.1 repair guide](UPGRADE_1.5.1.md), including the external repair utility for projects that cannot compile. Meshy itself requires neither.
+If both `com.atteneder.gltfast` and `com.unity.cloud.gltfast` are installed, keep only the variant required by your other packages. See [the 1.5.1 repair guide](UNITY_GLTFast_REPAIR.md), including the external repair utility for projects that cannot compile. Meshy itself requires neither.
 
 Every importer error says what went wrong and ends with a link to the matching section here. If this page doesn't help, use **Copy Diagnostics** in your engine's Meshy menu and paste it into a [bug report](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/issues/new?template=bug_report.yml) or on [Discord](https://discord.gg/vCcsnX4HQP). **Report a Bug** opens a pre-filled report for you.
 
@@ -70,7 +70,7 @@ The welcome dialog appears once, on first install. Updates only log a one-line n
 ## Blender
 
 - Blender 4.2+: install the ZIP with **Edit > Preferences > Get Extensions > ⌄ > Install from Disk**.
-- Blender 3.6–4.1: use **Edit > Preferences > Add-ons > Install...**.
+- Blender 3.6-4.1: use **Edit > Preferences > Add-ons > Install...**.
 - Import with **File > Import > Meshy Model (.meshy)**, or drag `.meshy` files into the viewport (4.1+).
 - When an import fails, a popup explains why with **Open Help**, **Copy Diagnostics** and **Report a Bug**. The same tools are under **Help > Meshy Importer**.
 - **"Extension EXT_meshopt_compression is not available"**: you are on add-on 1.3.0 or older, or you imported a `.glb` directly. Update the add-on. To get a `.glb`, use **Save Decoded .glb** in the import panel or `python -m meshy_core model.meshy`, which write a plain `.glb`.

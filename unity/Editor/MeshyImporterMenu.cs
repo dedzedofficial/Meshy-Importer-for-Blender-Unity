@@ -11,7 +11,7 @@ namespace FISHHWB.MeshyImporter.Editor
 {
     public static class MeshyImporterMenu
     {
-        private const string FallbackVersion = "1.5.1";
+        private const string FallbackVersion = "1.5.2";
         private static bool installingFallback;
 
         /// <summary>The installed package version, read from package.json so it never drifts.</summary>
