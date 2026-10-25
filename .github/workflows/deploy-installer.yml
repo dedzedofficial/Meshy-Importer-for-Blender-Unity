@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -58,6 +58,18 @@ jobs:
         if: steps.pages-check.outputs.ready == 'true'
         uses: actions/deploy-pages@v4
         id: deployment
+      - name: Activate smart button only after confirmed deployment
+        if: github.ref == 'refs/heads/main' && steps.pages-check.outputs.ready == 'true'
+        run: |
+          python tools/activate_installer.py
+          if git diff --quiet -- README.md; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          git commit -m 'Point download badge to deployed browser-aware installer'
+          git push origin HEAD:main
       - name: Show confirmed installer URL
         if: steps.pages-check.outputs.ready == 'true'
         run: echo "Deployed installer at https://dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/" >> "$GITHUB_STEP_SUMMARY"
