@@ -59,7 +59,8 @@ jobs:
 
   python-tests:
     name: Python tests (${{ matrix.python }})
-    runs-on: ubuntu-latest
+    # Python 3.9 is not shipped for Ubuntu 26.04 runners.
+    runs-on: ${{ matrix.python == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
