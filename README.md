@@ -18,6 +18,12 @@ Import Meshy `.meshy` models into **Unity, Blender, Godot and Unreal Engine**. E
 
 ## 🌐 Browser extension: save models without DevTools
 
+[![Install Browser Extension](https://img.shields.io/badge/INSTALL-Chrome_%26_Edge_Extension-087ea4?style=for-the-badge&logo=googlechrome&logoColor=white)](downloads/Meshy-Importer-Browser.zip?raw=1)
+
+**[Download the extension ZIP](downloads/Meshy-Importer-Browser.zip?raw=1)** · [Installation guide](browser/README.md)
+
+Extract the ZIP, open `chrome://extensions` (Chrome) or `edge://extensions` (Edge), enable **Developer mode**, click **Load unpacked**, and select the extracted folder containing `manifest.json`. Browsers do not permit direct installation of an unpublished extension just by clicking a GitHub link.
+
 Install the [Chrome/Edge browser extension](browser/README.md) (developer mode, Load unpacked) and open a finished model on **meshy.ai**. When the Meshy page **actually loads a genuine .meshy payload**, the extension shows a ready popup, can show a desktop notification, and automatically requests a local download with a cleaned name like `Meshy_Red_Dragon_123abc4567.meshy`. Auto-download and notifications can each be switched off in the extension popup. It remembers local filename/hash history to avoid duplicates; model bytes never enter extension storage or any FISHHWB server.
 
 This is an **on-page capture**, not a cloud generation-status checker: keep the model tab open or reload the finished model. [Manual saving instructions](GETTING_A_MESHY_FILE.md) remain available. Supported browser builds: Chrome/Edge Manifest V3; Firefox and Safari are not currently supported.
@@ -28,11 +34,14 @@ This is an **on-page capture**, not a cloud generation-status checker: keep the 
 
 | Engine | Download | Install |
 |---|---|---|
+| **Chrome / Edge** | **[Install Browser Extension](downloads/Meshy-Importer-Browser.zip?raw=1)** | Download the ZIP, extract it, then **Extensions > Developer mode > Load unpacked**. [Instructions](browser/README.md). |
 | **Unity** 2020.3+ | Nothing to download | **Window > Package Manager > + > Add package from git URL...** and paste:<br>`https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity` |
 | **Blender** 3.6+ | [Meshy-Importer-Blender.zip](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/latest/download/Meshy-Importer-Blender.zip) | Blender 4.2+: **Edit > Preferences > Get Extensions > ⌄ > Install from Disk**.<br>Blender 3.6–4.1: **Edit > Preferences > Add-ons > Install...** |
 | **Godot** 4.2+ | [Meshy-Importer-Godot.zip](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/latest/download/Meshy-Importer-Godot.zip) | Unzip into your project (you get `addons/meshy_importer`), then turn it on in **Project > Project Settings > Plugins**. |
 | **Unreal** 5.3+ | [Meshy-Importer-Unreal.zip](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/latest/download/Meshy-Importer-Unreal.zip) | Unzip into your project's `Plugins/` folder and restart the editor. |
 | Anything else | [Command-line converter](#-command-line-converter) | Turns a `.meshy` into a normal `.glb`. |
+
+The browser extension ZIP is also [available directly in this repository](downloads/Meshy-Importer-Browser.zip?raw=1), even when no GitHub release exists.
 
 All downloads are also on the [Releases page](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases). The same ZIPs are kept in this repository at `blender/` and `unreal/`.
 

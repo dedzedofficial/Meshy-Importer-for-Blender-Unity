@@ -2,13 +2,32 @@
 
 This optional Manifest V3 extension saves genuine `.meshy` files when Meshy's open browser tab loads them. It does **not** poll cloud jobs or intercept login sessions; it merely observes the responses the existing Meshy site already downloads.
 
-## Install
+## Install from GitHub
 
-1. Download or clone this repository; open `chrome://extensions` or `edge://extensions`.
-2. Enable **Developer mode**, select **Load unpacked**, and choose the `browser/` folder containing `manifest.json`.
-3. Open or reload a completed Meshy model page. When it actually loads a `MESHY.AI` model payload, an in-page popup appears; if allowed, a desktop notification appears too.
-4. By default the extension requests a browser download named like `Meshy_Red_Dragon_123abc4567.meshy`. In the extension toolbar popup, turn automatic saving or notifications on/off. If off, use the page popup's **Download .meshy** button.
-5. Import the saved `.meshy` file through Unity, Blender, Godot or Unreal. The toolbar popup lists recent capture names and dates and allows **Download latest model again** while that browser tab still has the bytes in memory.
+[![Download / Install Extension](https://img.shields.io/badge/INSTALL-Browser_Extension-087ea4?style=for-the-badge&logo=googlechrome&logoColor=white)](../downloads/Meshy-Importer-Browser.zip?raw=1)
+
+1. Click **[Download Browser Extension](../downloads/Meshy-Importer-Browser.zip?raw=1)**. This ZIP is bundled directly in the GitHub repository; a release is not required.
+2. Extract the ZIP anywhere convenient.
+3. Open `chrome://extensions` (Chrome) or `edge://extensions` (Edge).
+4. Enable **Developer mode** and select **Load unpacked**.
+5. Select the extracted folder containing `manifest.json`. The extension should then appear in your browser toolbar.
+
+**Chrome/Edge do not allow silent or one-click installation from a GitHub ZIP.** An actual single-click browser installation requires publishing the extension in the Chrome Web Store / Edge Add-ons. This GitHub install button downloads the official source-packaged extension so it can be loaded locally.
+
+## Use
+
+1. Open a completed Meshy model page, or reload it after installing. When it loads a genuine `MESHY.AI` payload, an in-page popup and (if allowed) a desktop notification appear.
+2. The extension requests a model download automatically by default; the extension popup lets you turn this off.
+3. Import the downloaded `.meshy` file into your engine.
+
+### Alternative developer installation
+
+You can also clone the repository and select its `browser/` folder with **Load unpacked**.
+
+### Capture details
+
+
+By default the extension requests a browser download named like `Meshy_Red_Dragon_123abc4567.meshy`. In the extension toolbar popup, turn automatic saving or notifications on/off. If off, use the page popup's **Download .meshy** button. Import the saved `.meshy` file through Unity, Blender, Godot or Unreal. The toolbar popup lists recent capture names and dates and allows **Download latest model again** while that browser tab still has the bytes in memory.
 
 The browser may ask where to save files or block automatic downloads. Verify in the Downloads page that saving succeeded. Store submission is not yet completed; this is a **developer-mode, unpacked extension**.
 
@@ -30,5 +49,7 @@ The browser may ask where to save files or block automatic downloads. Verify in 
 - Only download models you are entitled to use and obey Meshy's terms. This extension neither bypasses accounts nor unlocks paid features.
 
 ## Development
+
+A real Chromium smoke test against a local, synthetic Meshy response (no account required) runs in CI. A live authenticated Meshy session must still be verified by the maintainer because site internals can change.
 
 Run `node --test tests/browser-extension.test.cjs` from the repository root. The release builder `python tools/build_zips.py --release dist` creates `Meshy-Importer-Browser.zip` with `manifest.json` at its root.

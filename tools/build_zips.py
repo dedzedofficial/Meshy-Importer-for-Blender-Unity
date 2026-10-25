@@ -8,6 +8,7 @@ Release assets (stable names, linked from the README via releases/latest/downloa
   Meshy-Importer-Blender.zip   same content as the committed Blender ZIP
   Meshy-Importer-Unreal.zip    same content as the committed Unreal ZIP
   Meshy-Importer-Godot.zip     addons/meshy_importer/... (unzip into a Godot project)
+  Meshy-Importer-Browser.zip   extension root files, committed in downloads/
 
 Both ZIPs bundle the shared core/python/meshy_core package:
   blender/Meshy Importer for Blender & Unity - Blender.zip
@@ -65,6 +66,7 @@ PACKAGES = {
     os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip"): lambda: (
         _tree(os.path.join(ROOT, "unreal", "MeshyImporter"), "MeshyImporter/")
         + _core("MeshyImporter/Content/Python/meshy_core/")),
+    os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip"): _browser,
 }
 
 
@@ -87,7 +89,7 @@ RELEASE_ASSETS = {
     "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
     "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
     "Meshy-Importer-Godot.zip": _godot,
-    "Meshy-Importer-Browser.zip": _browser,
+    "Meshy-Importer-Browser.zip": PACKAGES[os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip")],
 }
 
 

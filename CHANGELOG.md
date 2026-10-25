@@ -4,7 +4,7 @@
 - Add an in-page ready popup, optional browser desktop notifications, local recent-capture history, switchable automatic downloads, and a save-again command.
 - Enforce a 128 MiB capture cap, limit host permissions to Meshy, and avoid uploads, remote scripts, credential access and project-data telemetry.
 - Explain local asset processing versus Meshy's own web requests and the importers' optional GitHub update checks across the user guides and host documentation.
-- Package the browser extension alongside the four engine release downloads; add MV3/static tests to CI.
+- Package the browser extension alongside the four engine release downloads and commit a direct-download install ZIP under `downloads/`, with an installation badge prominently displayed in the GitHub README. Add MV3/static tests and a headful Chromium smoke test using a local synthetic model response.
 - Compare bundled ZIP contents instead of zlib-compressed bytes in CI, and run Python 3.9 tests on a compatible Ubuntu runner.
 
 # Changelog
