@@ -1,0 +1,46 @@
+name: Publish v1.5.2 download assets (one time)
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-v1.5.2-once.yml']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check version, docs, tests and package ZIPs
+        run: |
+          python tools/check_versions.py
+          python tools/audit_docs.py
+          python tools/build_zips.py --check
+          python -m unittest discover -s tests -q
+      - name: Build all four v1.5.2 release archives
+        run: python tools/build_zips.py --release dist
+      - name: Prepare v1.5.2 release notes
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          changes=Path('CHANGELOG.md').read_text(encoding='utf-8')
+          found=re.search(r'^## 1\.5\.2\b[\s\S]*?(?=^## |\Z)', changes, re.M)
+          assert found, 'Missing v1.5.2 changelog section'
+          notes=found.group(0).strip()
+          notes+='\n\nChrome / Edge: download Meshy-Importer-Browser.zip, extract it and use Extensions > Developer mode > Load unpacked. One-click store installation is not yet available.\n'
+          Path('release-notes.md').write_text(notes, encoding='utf-8')
+          PY
+      - name: Create and verify public GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view v1.5.2 >/dev/null 2>&1; then
+            gh release create v1.5.2 dist/*.zip --target "$GITHUB_SHA" --title 'Meshy Importer v1.5.2' --notes-file release-notes.md
+          fi
+          gh release view v1.5.2 --json assets --jq '.assets[].name' | sort > actual.txt
+          printf '%s\n' Meshy-Importer-Blender.zip Meshy-Importer-Browser.zip Meshy-Importer-Godot.zip Meshy-Importer-Unreal.zip | sort > expected.txt
+          diff -u expected.txt actual.txt
+          gh release view v1.5.2 --json url --jq .url
