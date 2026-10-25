@@ -141,6 +141,7 @@ def main():
             else:
                 print("%s is up to date (%d files)." % (rel, len(entries)))
         else:
+            os.makedirs(os.path.dirname(out), exist_ok=True)
             with open(out, "wb") as f:
                 f.write(data)
             print("wrote %s (%d bytes, %d files)" % (rel, len(data), len(entries)))

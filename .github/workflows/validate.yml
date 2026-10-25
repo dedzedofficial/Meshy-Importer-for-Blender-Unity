@@ -65,18 +65,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install Playwright controller
-        run: python -m pip install playwright
-      - name: Find installed Chrome
+      - name: Install and prepare Playwright Chromium
         run: |
-          binary="$(command -v google-chrome || command -v chromium || true)"
-          if [ -z "$binary" ]; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq chromium xvfb
-            binary="$(command -v chromium)"
-          fi
-          echo "CHROME_PATH=$binary" >> "$GITHUB_ENV"
-          "$binary" --version
+          python -m pip install playwright
+          python -m playwright install chromium
       - name: Exercise real extension on synthetic Meshy page
         run: xvfb-run -a python tests/browser_smoke.py
 

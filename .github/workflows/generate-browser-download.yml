@@ -14,7 +14,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Generate the browser ZIP from source
-        run: python tools/build_zips.py
+        run: |
+          mkdir -p downloads
+          python tools/build_zips.py
       - name: Commit direct download ZIP to feature branch
         run: |
           git config user.name 'github-actions[bot]'

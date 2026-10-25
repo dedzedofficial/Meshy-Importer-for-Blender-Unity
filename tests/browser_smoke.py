@@ -67,9 +67,9 @@ def wait_for_history(worker, size):
 
 
 def run():
-    chrome = os.environ.get("CHROME_PATH") or shutil.which("google-chrome") or shutil.which("chromium")
-    if not chrome:
-        raise RuntimeError("Chromium/Google Chrome executable not found")
+    # Playwright's own unbranded Chromium supports loading an unpacked MV3 extension.
+    # Recent branded Chrome builds ignore the --load-extension startup switch.
+    chrome = os.environ.get("CHROME_PATH")
 
     with tempfile.TemporaryDirectory() as temp:
         folder = Path(temp)
@@ -87,9 +87,11 @@ def run():
         thread.start()
 
         with sync_playwright() as playwright:
+            executable = chrome or playwright.chromium.executable_path
+            print("Using extension-enabled Chromium:", executable, flush=True)
             context = playwright.chromium.launch_persistent_context(
                 user_data_dir=str(folder / "profile"),
-                executable_path=chrome,
+                executable_path=executable,
                 headless=False,
                 accept_downloads=True,
                 ignore_https_errors=True,
