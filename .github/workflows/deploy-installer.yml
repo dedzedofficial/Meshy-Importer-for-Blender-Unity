@@ -30,12 +30,34 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify browser routing
         run: node --test tests/installer-routing.test.cjs
+      - name: Confirm GitHub Pages is configured
+        id: pages-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status="$(curl -sS -o /tmp/meshy-pages.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/pages")"
+          if [ "$status" = 200 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" = 404 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "## GitHub Pages setup needed" >> "$GITHUB_STEP_SUMMARY"
+            echo "Set repository Settings > Pages > Source to GitHub Actions, then run this workflow again." >> "$GITHUB_STEP_SUMMARY"
+          else
+            cat /tmp/meshy-pages.json
+            exit 1
+          fi
       - name: Configure Pages
+        if: steps.pages-check.outputs.ready == 'true'
         uses: actions/configure-pages@v5
       - name: Upload installer site
+        if: steps.pages-check.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
       - name: Deploy
+        if: steps.pages-check.outputs.ready == 'true'
         uses: actions/deploy-pages@v4
         id: deployment
+      - name: Show confirmed installer URL
+        if: steps.pages-check.outputs.ready == 'true'
+        run: echo "Deployed installer at https://dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/" >> "$GITHUB_STEP_SUMMARY"

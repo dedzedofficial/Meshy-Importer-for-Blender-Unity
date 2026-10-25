@@ -6,6 +6,9 @@
 
 ## Install from GitHub
 
+For a future browser-aware install flow, see the [smart installer setup and platform support guide](../site/README.md). The direct ZIP method remains the currently published and verified installation route.
+
+
 1. Download the ZIP from the official v1.5.2 release.
 2. Extract it to a folder you will keep.
 3. Open `chrome://extensions` or `edge://extensions`.
