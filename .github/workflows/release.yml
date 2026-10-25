@@ -53,6 +53,7 @@ jobs:
                     "`https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity#%s`\n"
                     "- **Blender:** Meshy-Importer-Blender.zip (Install from Disk)\n"
                     "- **Godot:** unzip Meshy-Importer-Godot.zip into your project and enable the plugin\n"
+                    "- **Browser (Chrome/Edge):** unzip Meshy-Importer-Browser.zip and Load unpacked\n"
                     "- **Unreal:** unzip Meshy-Importer-Unreal.zip into your project's Plugins/ folder\n"
                     % os.environ["GITHUB_REF_NAME"])
           open("release-notes.md", "w", encoding="utf-8").write(notes)

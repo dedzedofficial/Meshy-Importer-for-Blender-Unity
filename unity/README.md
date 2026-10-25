@@ -1,5 +1,7 @@
 # Meshy Importer for Unity — v1.5.1
 
+**Local-first privacy:** Model files are decoded/imported on your machine and are not uploaded to FISHHWB. The separate [Chrome/Edge browser extension](../browser/README.md) can save verified `.meshy` files as the Meshy website loads them. Meshy's website itself still uses Meshy's servers, and the importer's optional public GitHub update check can be disabled in settings.
+
 **Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.1.md` in the release archive.
 
 **Upgrading with duplicate glTFast GUID errors?** Read `UPGRADE_1.5.1.md` in the release archive. Keep only one glTFast variant; updating Meshy alone does not remove project dependencies.

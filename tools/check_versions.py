@@ -23,6 +23,7 @@ def _search(rel, pattern, flags=0):
 
 
 SOURCES = [
+    ("browser/manifest.json", lambda: json.loads(_read("browser/manifest.json"))["version"]),
     ("unity/package.json", lambda: json.loads(_read("unity/package.json"))["version"]),
     ("FISHHWB_METADATA.json", lambda: json.loads(_read("FISHHWB_METADATA.json"))["version"]),
     ("blender/meshy_blender_importer/blender_manifest.toml",

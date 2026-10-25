@@ -53,6 +53,11 @@ def _godot():
     return _tree(os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
 
 
+def _browser():
+    # Unpacked Chromium extension: manifest.json must be at archive root.
+    return _tree(os.path.join(ROOT, "browser"), "")
+
+
 PACKAGES = {
     os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip"): lambda: (
         _tree(os.path.join(ROOT, "blender", "meshy_blender_importer"), "meshy_blender_importer/")
@@ -82,6 +87,7 @@ RELEASE_ASSETS = {
     "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
     "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
     "Meshy-Importer-Godot.zip": _godot,
+    "Meshy-Importer-Browser.zip": _browser,
 }
 
 

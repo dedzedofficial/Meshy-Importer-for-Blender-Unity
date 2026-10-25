@@ -12,6 +12,16 @@ Import Meshy `.meshy` models into **Unity, Blender, Godot and Unreal Engine**. E
 
 > **Do you need this?** If you used Meshy's normal **Download** button, you already have a `.glb`, `.fbx` or `.obj` file. Import that directly; you don't need this importer. This importer is for `.meshy` files saved from the Meshy website ([how](GETTING_A_MESHY_FILE.md)).
 
+## 🔒 Local-first asset privacy
+
+**Local-only model data:** This project captures, decodes, converts and imports asset bytes on your device. No asset bytes, project files or credentials are uploaded by the FISHHWB tools. Meshy's own website still communicates with Meshy's servers, and optional GitHub release checks access public update metadata; disable those checks in each host if desired.
+
+## 🌐 Browser extension: save models without DevTools
+
+Install the [Chrome/Edge browser extension](browser/README.md) (developer mode, Load unpacked) and open a finished model on **meshy.ai**. When the Meshy page **actually loads a genuine .meshy payload**, the extension shows a ready popup, can show a desktop notification, and automatically requests a local download with a cleaned name like `Meshy_Red_Dragon_123abc4567.meshy`. Auto-download and notifications can each be switched off in the extension popup. It remembers local filename/hash history to avoid duplicates; model bytes never enter extension storage or any FISHHWB server.
+
+This is an **on-page capture**, not a cloud generation-status checker: keep the model tab open or reload the finished model. [Manual saving instructions](GETTING_A_MESHY_FILE.md) remain available. Supported browser builds: Chrome/Edge Manifest V3; Firefox and Safari are not currently supported.
+
 ## 🚀 Quick start
 
 ### 1. Download for your engine
@@ -28,7 +38,7 @@ All downloads are also on the [Releases page](https://github.com/dedzedofficial/
 
 ### 2. Get a `.meshy` file
 
-Open the model on the Meshy website in Chrome, press **F12**, go to **Network**, reload, and save the model's response. The **[step-by-step guide](GETTING_A_MESHY_FILE.md)** walks through it.
+**Recommended:** install the [browser extension](browser/README.md), open the model on Meshy, and let it detect and save the model locally. Or [save the model request manually from browser DevTools](GETTING_A_MESHY_FILE.md) without installing an extension.
 
 ### 3. Import it
 
@@ -134,9 +144,9 @@ See **[COMPATIBILITY.md](COMPATIBILITY.md)** for details.
 
 ## 🔒 Privacy
 
-Models are decoded locally in every engine and are never uploaded to FISHHWB or a conversion server.
+**Your model files are handled locally in all five integrations:** the browser extension, Unity, Blender, Godot, Unreal, and the command-line converter never upload model data, source assets or credentials to FISHHWB. The browser extension reads only binary responses already loaded by the Meshy page, verifies their `.meshy` signature and saves them through the browser's Downloads workflow. Its persistent storage contains preferences and filename/hash history, not model bytes.
 
-The plugins check GitHub for a newer release at most once a day. The check downloads only the public release record; nothing about you or your project is sent. Turn it off in the Unity **Meshy Importer** window, Blender's add-on preferences (it also respects Blender's **Allow Online Access** setting), Godot's **Editor Settings > Meshy Importer**, or Unreal's **Meshy Importer Help** menu.
+**External connections still exist outside that local processing:** Meshy's own website communicates with Meshy's servers to load models. Unity, Blender, Godot and Unreal can make an **optional public GitHub release metadata check** (at most daily). They do not send model bytes; disable the checks in each integration's settings. Installing/updating this project from GitHub also naturally involves a GitHub download. See [Security](SECURITY.md) and [browser privacy details](browser/README.md).
 
 ## ❤️ Support
 

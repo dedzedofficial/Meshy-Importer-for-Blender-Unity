@@ -10,6 +10,9 @@ Use this checklist before publishing a release.
 - [ ] Update `CHANGELOG.md`.
 - [ ] Update compatibility/support notes if host versions changed.
 - [ ] `python -m unittest discover -s tests` passes.
+- [ ] `node --test tests/browser-extension.test.cjs` passes.
+- [ ] Load the unpacked `browser/` folder in Chrome/Edge, test a real Meshy asset, verify the saved file starts with `MESHY.AI`, test notifications, filename, duplicates, auto-download off/on, and a denied/blocked browser download.
+- [ ] Validate the release ZIP contains `manifest.json` at its root, and test loading the extracted ZIP unpacked in Chrome/Edge.
 - [ ] `dotnet build tests/csharp/unity-compile` succeeds.
 - [ ] Rebuild the ZIPs with `python tools/build_zips.py`. `--check` must pass.
 - [ ] Run the repository validation workflow. It covers the checks above plus headless Blender and Godot imports.

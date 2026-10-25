@@ -48,8 +48,14 @@ jobs:
       - name: Committed ZIPs match their sources
         run: python tools/build_zips.py --check
 
+      - name: Browser extension JS, manifest and naming tests
+        run: node --test tests/browser-extension.test.cjs
+
       - name: Release assets build
         run: python tools/build_zips.py --release "$RUNNER_TEMP/dist"
+
+      - name: Browser extension ZIP has manifest at root
+        run: python -c "import zipfile, os; z=zipfile.ZipFile(os.path.join(os.environ['RUNNER_TEMP'], 'dist', 'Meshy-Importer-Browser.zip')); assert 'manifest.json' in z.namelist()"
 
   python-tests:
     name: Python tests (${{ matrix.python }})
