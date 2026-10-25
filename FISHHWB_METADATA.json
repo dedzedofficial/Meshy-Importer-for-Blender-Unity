@@ -31,7 +31,11 @@
     "Unity",
     "Unity ScriptedImporter",
     "Unreal Engine",
-    "Unreal Engine plugin"
+    "Unreal Engine plugin",
+    "Chrome browser extension",
+    "Edge browser extension",
+    "Local-only mesh capture",
+    "automatic .meshy download"
   ],
   "unity": {
     "package_name": "com.fishhwb.meshy-importer",
@@ -54,5 +58,14 @@
   "blender": {
     "zip": "blender/Meshy Importer for Blender & Unity - Blender.zip",
     "min_version": "3.6"
+  },
+  "browser": {
+    "path": "browser",
+    "manifest_version": 3,
+    "browsers": [
+      "Chrome 111+",
+      "Microsoft Edge (Chromium)"
+    ],
+    "privacy": "Local-only model data. No extension-initiated network requests; existing Meshy site traffic and optional importer GitHub update checks remain."
   }
 }

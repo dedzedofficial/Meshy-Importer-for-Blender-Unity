@@ -8,6 +8,7 @@ Release assets (stable names, linked from the README via releases/latest/downloa
   Meshy-Importer-Blender.zip   same content as the committed Blender ZIP
   Meshy-Importer-Unreal.zip    same content as the committed Unreal ZIP
   Meshy-Importer-Godot.zip     addons/meshy_importer/... (unzip into a Godot project)
+  Meshy-Importer-Browser.zip   extension root files, committed in downloads/
 
 Both ZIPs bundle the shared core/python/meshy_core package:
   blender/Meshy Importer for Blender & Unity - Blender.zip
@@ -53,6 +54,11 @@ def _godot():
     return _tree(os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
 
 
+def _browser():
+    # Unpacked Chromium extension: manifest.json must be at archive root.
+    return _tree(os.path.join(ROOT, "browser"), "")
+
+
 PACKAGES = {
     os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip"): lambda: (
         _tree(os.path.join(ROOT, "blender", "meshy_blender_importer"), "meshy_blender_importer/")
@@ -60,6 +66,7 @@ PACKAGES = {
     os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip"): lambda: (
         _tree(os.path.join(ROOT, "unreal", "MeshyImporter"), "MeshyImporter/")
         + _core("MeshyImporter/Content/Python/meshy_core/")),
+    os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip"): _browser,
 }
 
 
@@ -82,8 +89,27 @@ RELEASE_ASSETS = {
     "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
     "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
     "Meshy-Importer-Godot.zip": _godot,
+    "Meshy-Importer-Browser.zip": PACKAGES[os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip")],
 }
 
+
+def _zip_matches_sources(archive, entries):
+    """Compare uncompressed files, not zlib-dependent ZIP byte streams."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
+            expected_names = [arc for arc, _ in entries]
+            if sorted(zf.namelist()) != sorted(expected_names):
+                return False
+            for arc, path in entries:
+                with open(path, "rb") as f:
+                    expected = f.read()
+                if not path.endswith((".png", ".webp", ".zip")):
+                    expected = expected.replace(b"\r\n", b"\n")
+                if zf.read(arc) != expected:
+                    return False
+        return True
+    except (OSError, ValueError, zipfile.BadZipFile, KeyError):
+        return False
 
 def main():
     ap = argparse.ArgumentParser()
@@ -109,12 +135,13 @@ def main():
                     current = f.read()
             except OSError:
                 current = b""
-            if current != data:
+            if not _zip_matches_sources(current, entries):
                 print("%s is out of date. Run: python tools/build_zips.py" % rel, file=sys.stderr)
                 stale += 1
             else:
                 print("%s is up to date (%d files)." % (rel, len(entries)))
         else:
+            os.makedirs(os.path.dirname(out), exist_ok=True)
             with open(out, "wb") as f:
                 f.write(data)
             print("wrote %s (%d bytes, %d files)" % (rel, len(data), len(entries)))

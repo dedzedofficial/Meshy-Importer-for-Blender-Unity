@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meshy Asset Capture</title><link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header><img src="icons/icon.png" width="32" height="32" alt="">
+<div><strong>Meshy Asset Capture</strong><small>FISHHWB | Ded Zed</small></div></header>
+<main>
+<p>Save genuine .meshy assets when your Meshy tab loads them.</p>
+<label class="setting"><span>Download new assets automatically</span><input id="auto" type="checkbox"></label>
+<label class="setting"><span>Show desktop notifications</span><input id="notifications" type="checkbox"></label>
+<button id="save">Download latest model again</button>
+<p id="status" role="status">Open a Meshy model page to start.</p>
+<h2>Recent captures</h2><ul id="recent"></ul>
+<section class="privacy"><strong>🔒 Local model handling</strong>
+<p>Model bytes stay in your browser and save to your device. This extension uploads nothing. Meshy's own website still communicates with Meshy.</p></section>
+<a href="https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/blob/main/browser/README.md" target="_blank" rel="noreferrer">Help and limitations</a>
+</main><script src="popup.js"></script>
+</body></html>

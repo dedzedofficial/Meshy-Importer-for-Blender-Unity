@@ -6,7 +6,7 @@ How to get each package into the places users look for it. The code side is read
 
 1. Finish `RELEASE_CHECKLIST.md` and merge to `main`.
 2. Tag and push: `git tag v1.5.1 && git push origin v1.5.1`.
-3. The **Release** workflow (`.github/workflows/release.yml`) checks that the tag matches every version, runs the tests, builds `Meshy-Importer-Blender.zip`, `Meshy-Importer-Unreal.zip` and `Meshy-Importer-Godot.zip`, and publishes the release with the matching `CHANGELOG.md` section as its notes.
+3. The **Release** workflow (`.github/workflows/release.yml`) checks that the tag matches every version, runs the tests, builds `Meshy-Importer-Blender.zip`, `Meshy-Importer-Unreal.zip`, `Meshy-Importer-Godot.zip` and `Meshy-Importer-Browser.zip`, and publishes the release with the matching `CHANGELOG.md` section as its notes.
 
 The README's download buttons use `releases/latest/download/<asset>`, so they point at the newest release automatically. **They return 404 until the first release is published.** The in-app update checks read the same "latest release", so they stay silent until then too.
 
@@ -42,3 +42,9 @@ Lets users install from the **AssetLib** tab inside the Godot editor.
 ## 5. Unreal (Fab)
 
 Code plugins on Fab need a C++ module and per-engine-version builds. This plugin is Python only, so ship it through GitHub Releases for now.
+
+## 6. Browser extension (Chrome / Edge)
+
+The source is under `browser/`, and the **[install ZIP committed in `downloads/`](downloads/Meshy-Importer-Browser.zip?raw=1)** contains a Manifest V3 extension at the ZIP root. This file is available directly from the repository before any release is published; the same content is later included in release assets. For development: unzip, open `chrome://extensions` or `edge://extensions`, enable Developer mode and choose **Load unpacked**. A regular signed extension-store distribution requires an independent Chrome Web Store / Microsoft Edge Add-ons submission and review; it has **not** been published to either store yet. Test against real Meshy downloads before submitting; Meshy's private asset response format can change.
+
+**Privacy disclosure for store listings:** No asset content is uploaded by the extension; title/hash/time preferences stay in local extension storage, and captured bytes remain only in the Meshy tab and the user's Downloads. Meshy's webpage still contacts Meshy's services.

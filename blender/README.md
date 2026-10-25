@@ -1,5 +1,7 @@
 # Meshy Importer for Blender
 
+**Local-first privacy:** Model files are decoded/imported on your machine and are not uploaded to FISHHWB. The separate [Chrome/Edge browser extension](../browser/README.md) can save verified `.meshy` files as the Meshy website loads them. Meshy's website itself still uses Meshy's servers, and the importer's optional public GitHub update check can be disabled in settings.
+
 The ready-to-install Blender ZIP is included in this repository:
 
 `Meshy Importer for Blender & Unity - Blender.zip`

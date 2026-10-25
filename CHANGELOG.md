@@ -1,3 +1,12 @@
+## Unreleased — browser capture and local-data clarity
+
+- Introduce a Chrome/Edge Manifest V3 extension that observes Meshy model responses already fetched by the open page, validates their `MESHY.AI` signature, deduplicates via a local SHA-256 fingerprint, and requests a properly named `.meshy` download.
+- Add an in-page ready popup, optional browser desktop notifications, local recent-capture history, switchable automatic downloads, and a save-again command.
+- Enforce a 128 MiB capture cap, limit host permissions to Meshy, and avoid uploads, remote scripts, credential access and project-data telemetry.
+- Explain local asset processing versus Meshy's own web requests and the importers' optional GitHub update checks across the user guides and host documentation.
+- Package the browser extension alongside the four engine release downloads and commit a direct-download install ZIP under `downloads/`, with an installation badge prominently displayed in the GitHub README. Add MV3/static tests and a headful Chromium smoke test using a local synthetic model response.
+- Compare bundled ZIP contents instead of zlib-compressed bytes in CI, and run Python 3.9 tests on a compatible Ubuntu runner.
+
 # Changelog
 
 ## 1.5.1 — 2026-09-26

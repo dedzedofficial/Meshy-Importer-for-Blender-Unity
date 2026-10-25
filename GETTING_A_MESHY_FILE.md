@@ -2,6 +2,12 @@
 
 > **First check you need one.** Meshy's normal **Download** button gives you a `.glb`, `.fbx` or `.obj` file. Every engine imports those directly, without this importer. The `.meshy` file is what the Meshy website itself loads to show the model in your browser. This guide shows how to save it.
 
+## Easier: use the local browser extension
+
+Install [FISHHWB Meshy Asset Capture](browser/README.md) in Chrome or Edge. Open or reload the finished model's Meshy page. When the page actually loads a genuine `MESHY.AI` payload, the extension shows a popup, requests a properly named `.meshy` download automatically (configurable), and can notify you on the desktop. **All model handling happens on your device**; the extension does not upload models. Meshy's website continues to use Meshy's own servers. It does not watch cloud generation jobs while your tab is closed.
+
+If your model is not captured, use the manual method below. The extension is optional.
+
 ## Save it with Chrome (about a minute)
 
 1. Open the model's page on the Meshy website in **Google Chrome** (Edge and other Chromium browsers work the same way).

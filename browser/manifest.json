@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "FISHHWB Meshy Asset Capture",
+  "version": "1.5.1",
+  "description": "Locally save verified Meshy models already loaded by your browser.",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage",
+    "notifications",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://meshy.ai/*",
+    "https://*.meshy.ai/*"
+  ],
+  "action": {
+    "default_title": "Meshy Asset Capture",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "64": "icons/icon.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "64": "icons/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meshy.ai/*",
+        "https://*.meshy.ai/*"
+      ],
+      "js": [
+        "page-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://meshy.ai/*",
+        "https://*.meshy.ai/*"
+      ],
+      "js": [
+        "shared.js",
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

@@ -2,6 +2,16 @@
 
 All hosts ship as version **1.5.1** and decode `.meshy` payloads locally.
 
+## Browser extension
+
+| Browser | Support | Notes |
+|---|---|---|
+| Google Chrome (111+) | Supported target | Manifest V3, load unpacked in developer mode |
+| Microsoft Edge (Chromium) | Supported target | Load unpacked in developer mode |
+| Firefox / Safari | Not yet supported | Different extension APIs/lifecycle require separate testing |
+
+Models can be captured only when the Meshy page fetches a genuine `MESHY.AI` binary response; support depends on Meshy's current site transport. The browser extension stores only model fingerprints/names/settings locally and downloads via the browser, with a 128 MiB capture limit. No model bytes are sent to FISHHWB. Meshy's own web traffic and optional host release checks are separate.
+
 ## Unity
 
 | Unity | Status | Notes |

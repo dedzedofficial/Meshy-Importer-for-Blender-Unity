@@ -6,6 +6,15 @@ If both `com.atteneder.gltfast` and `com.unity.cloud.gltfast` are installed, kee
 
 Every importer error says what went wrong and ends with a link to the matching section here. If this page doesn't help, use **Copy Diagnostics** in your engine's Meshy menu and paste it into a [bug report](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/issues/new?template=bug_report.yml) or on [Discord](https://discord.gg/vCcsnX4HQP). **Report a Bug** opens a pre-filled report for you.
 
+## Browser extension capture issues
+
+- **No notification/file:** the model must actually load in an open Meshy tab. Reload the finished model after installing the extension; it does not poll cloud job status. Check the extension popup switches, browser notification/download permissions and the browser Downloads panel.
+- **The model is larger than 128 MiB:** the extension deliberately skips it to protect tab memory. Use the manual Network-panel method described in [GETTING_A_MESHY_FILE.md](GETTING_A_MESHY_FILE.md).
+- **Save again unavailable:** the model bytes exist only in the original tab's memory. Open/reload the model tab; previous captures are remembered by hash, so automatic duplicate downloads are suppressed.
+- **Wrong filename:** the page heading/title may be generic. The unique local hash is appended to prevent collisions; rename the saved file if desired.
+- **Site update broke detection:** Meshy's internal payload transport is undocumented. Use the manual method until the extension's capture logic is updated.
+- **Privacy:** asset bytes stay local to your browser and engine. Meshy's existing website traffic and opt-in GitHub update checks still occur separately.
+
 ## Wrong file errors
 
 These mean the file isn't a `.meshy` model. The message says what the file actually is:
