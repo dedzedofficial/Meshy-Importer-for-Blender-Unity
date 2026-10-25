@@ -1,12 +1,3 @@
-## Browser-aware installation page
-
-The optional static browser installer lives in [`site/`](site/README.md). Its landing page detects the desktop browser and OS locally and selects the right available install route. Chrome and Edge receive the tested v1.5.2 ZIP while verified browser-store listing URLs are not yet available. Firefox, Opera, Safari and mobile clients receive honest compatibility guidance.
-
-The repository currently requires **Settings > Pages > Build and deployment > Source > GitHub Actions** to be enabled by its owner before the landing page can be deployed. After enabling, run the **Publish browser-aware installer** workflow from Actions. Verify it is live before pointing the repository's download badge to the Pages URL.
-
-When a new official store listing is approved, set that browser's URL in `site/installer.js` and test its route before deploying. Keep the direct release ZIP link visible as the Chrome fallback.
-
-
 # Publishing
 
 How to get each package into the places users look for it. The code side is ready; each store needs a one-time submission by the maintainer's account.
@@ -58,6 +49,8 @@ Official GitHub v1.5.2 download: [Meshy-Importer-Browser.zip](https://github.com
 
 GitHub distributes the ZIP, but browsers cannot install an unpacked extension directly from GitHub. For now, users must extract it, enable Developer mode and select **Load unpacked**.
 
+The [FISH HWB browser-aware installer](https://fishhwb.github.io/install/meshy/) is hosted in the existing [fishhwb.github.io](https://github.com/fishhwb/fishhwb.github.io) repository at `install/meshy/`. It is the single maintained landing page, not a separate GitHub Pages site for this repository. Change browser routes and store listing URLs in the FISH HWB website's `install/meshy/installer.js`. The site also adds the button to the generated Meshy project page and homepage project cards. The tested v1.5.2 GitHub ZIP remains available as a manual fallback.
+
 For a genuine one-click installation:
 
 1. Sign in to a Chrome Web Store developer account and/or Microsoft Edge Add-ons developer account.
@@ -65,6 +58,6 @@ For a genuine one-click installation:
 3. Add screenshots, a support URL, privacy disclosures, any required publisher verification and store listing metadata.
 4. Test the extension with a real authorised Meshy model in Chrome and Edge before submitting for review.
 5. Wait for store approval and obtain the actual listing URLs.
-6. **Only after approval**, change the README badge from Download to Install and point it to the published store listings. Never invent a store URL or extension ID.
+6. **Only after approval**, add the verified store URL to the FISH HWB installer page and run its browser routing tests. The Meshy README can keep linking to the smart installer. Never invent a store URL or extension ID.
 
 Privacy disclosure: model content is held and saved locally; the extension stores only settings and recent hashes/names/timestamps. No model uploads or telemetry occur. Meshy's own site continues to contact its services.

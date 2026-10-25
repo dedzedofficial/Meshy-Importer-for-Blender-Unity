@@ -13,7 +13,7 @@ Use this checklist before publishing a release.
 - [ ] `node --test tests/browser-extension.test.cjs` passes.
 - [ ] Load the unpacked `browser/` folder in Chrome/Edge, test a real Meshy asset, verify the saved file starts with `MESHY.AI`, test notifications, filename, duplicates, auto-download off/on, and a denied/blocked browser download.
 - [ ] Validate both the downloadable `downloads/Meshy-Importer-Browser.zip` and the release ZIP contain `manifest.json` at their root, and test loading the extracted ZIP unpacked in Chrome/Edge.
-- [ ] Test the download badge in the GitHub README; confirm it downloads the archive and does not lead to a missing release.
+- [ ] Test the smart installer badge in the README, confirm `https://fishhwb.github.io/install/meshy/` returns the correct browser-aware page, and verify the manual ZIP download remains available.
 - [ ] `dotnet build tests/csharp/unity-compile` succeeds.
 - [ ] Rebuild the ZIPs with `python tools/build_zips.py`. `--check` must pass.
 - [ ] Run the repository validation workflow. It covers the checks above plus headless Blender and Godot imports.
@@ -24,3 +24,4 @@ Use this checklist before publishing a release.
 
 - [ ] Confirm the v1.5.2 GitHub release exists and every README download URL returns its actual binary asset.
 - [ ] Check no active Markdown contains em dashes or links to retired standalone guides.
+- [ ] Verify website installer routing tests in `fishhwb/fishhwb.github.io` pass before advertising new browser-store destinations.

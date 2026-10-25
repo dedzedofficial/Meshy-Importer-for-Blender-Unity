@@ -8,18 +8,18 @@ Import and convert Meshy `.meshy` assets on your own device. Unity, Blender, God
 
 ## Browser extension
 
-A browser-detecting installer page is prepared in [`site/`](site/README.md). Once repository GitHub Pages hosting is enabled and deployed, it can replace the badge below, route Chrome and Edge to the correct install method, and use real browser-store listings as they become available. Until then, this button intentionally points directly to the working v1.5.2 ZIP so visitors never encounter a broken installer page.
+**Smart browser installation is live on the existing [FISH HWB website](https://fishhwb.github.io/install/meshy/).** The page detects the desktop browser locally and offers the tested Chrome or Edge download with the correct instructions. Unsupported browsers receive compatibility guidance; official one-click store installation can be offered once a listing exists.
 
 
-[![Download Browser Extension v1.5.2](https://img.shields.io/badge/DOWNLOAD-Browser_Extension_v1.5.2-087ea4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip)
+[![Smart Install, detects your browser](https://img.shields.io/badge/SMART_INSTALL-Auto_Detect_Browser-087ea4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://fishhwb.github.io/install/meshy/)
 
-**[Download the browser extension v1.5.2](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip)** | [Installation and privacy details](browser/README.md)
+**[Detect my browser and install](https://fishhwb.github.io/install/meshy/)** | **[Manual v1.5.2 ZIP download](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip)** | [Installation and privacy details](browser/README.md)
 
 1. Download and extract the ZIP.
 2. Open `chrome://extensions` or `edge://extensions`.
 3. Enable **Developer mode**, choose **Load unpacked**, and select the extracted folder containing `manifest.json`.
 
-Chrome and Edge do not permit a GitHub site to install an unpublished extension with a single click. An actual one-click **Install** button can be added once approved Chrome Web Store or Edge Add-ons listings exist. The current button correctly says **Download**.
+Chrome and Edge do not permit a website to install an unpublished extension with a single click. The FISH HWB installer detects your browser and guides you through the supported download. Store installation will be offered only after verified listings are available.
 
 When an open Meshy model page loads a genuine `MESHY.AI` payload, the extension validates it, names it, offers a popup and can download it locally. It does not poll Meshy's cloud generation jobs in the background.
 
@@ -27,7 +27,7 @@ When an open Meshy model page loads a genuine `MESHY.AI` payload, the extension 
 
 | Platform | v1.5.2 download | Setup |
 |---|---|---|
-| Chrome / Edge | [Browser ZIP](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip) | Extract, then Extensions > Developer mode > Load unpacked |
+| Chrome / Edge | [Smart browser installer](https://fishhwb.github.io/install/meshy/) or [ZIP](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip) | Detect browser, then extract ZIP and use Extensions > Developer mode > Load unpacked |
 | Unity 2020.3+ | [Unity package source](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/tree/v1.5.2/unity) | Add package from Git URL: `https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity.git?path=/unity#v1.5.2` |
 | Blender 3.6+ | [Blender ZIP](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Blender.zip) | Preferences > Extensions or Add-ons > Install from Disk |
 | Godot 4.2+ | [Godot ZIP](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Godot.zip) | Unzip into project and enable the addon |

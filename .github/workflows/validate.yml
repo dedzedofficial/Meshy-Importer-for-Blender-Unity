@@ -54,9 +54,6 @@ jobs:
       - name: Browser extension JS, manifest and naming tests
         run: node --test tests/browser-extension.test.cjs
 
-      - name: Browser-aware installer routing and privacy tests
-        run: node --test tests/installer-routing.test.cjs
-
       - name: Release assets build
         run: python tools/build_zips.py --release "$RUNNER_TEMP/dist"
 
