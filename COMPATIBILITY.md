@@ -1,6 +1,6 @@
 # Compatibility
 
-All hosts ship as version **1.5.1** and decode `.meshy` payloads locally.
+All hosts ship as version **1.5.2** and decode `.meshy` payloads locally.
 
 ## Browser extension
 
@@ -36,7 +36,7 @@ Non-LTS Unity versions may work but are not the recommended support target.
 | Blender | Status | Install method |
 |---|---|---|
 | 3.6 LTS | Supported (tested headless) | Legacy Add-on |
-| 4.0–4.1 | Supported | Legacy Add-on |
+| 4.0-4.1 | Supported | Legacy Add-on |
 | 4.2+ | Supported (tested headless) | Extension / Install from Disk |
 | 5.x | Supported | Extension / Install from Disk |
 
@@ -57,7 +57,7 @@ Godot's glTF importer implements neither `EXT_meshopt_compression` nor `KHR_mesh
 | Unreal | Status |
 |---|---|
 | 5.3+ | Supported (Editor Python plugin; the Python Editor Script Plugin is enabled automatically; needs the Interchange/glTF importer) |
-| 5.0–5.2, 4.27 | Not supported |
+| 5.0-5.2, 4.27 | Not supported |
 
 Meshy's meshopt geometry, quantized attributes, texture transforms and WebP textures are converted to plain glTF before Unreal's glTF (Interchange) importer runs. Install Pillow into the editor's Python for faster WebP decoding.
 

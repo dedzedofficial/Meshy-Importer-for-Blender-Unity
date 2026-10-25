@@ -1,10 +1,10 @@
-# Meshy Importer for Unity — v1.5.1
+# Meshy Importer for Unity : v1.5.2
 
 **Local-first privacy:** Model files are decoded/imported on your machine and are not uploaded to FISHHWB. The separate [Chrome/Edge browser extension](../browser/README.md) can save verified `.meshy` files as the Meshy website loads them. Meshy's website itself still uses Meshy's servers, and the importer's optional public GitHub update check can be disabled in settings.
 
-**Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.1.md` in the release archive.
+**Workflow upgrades:** material overrides, protected editable copies, remembered settings, preflight and import summaries. See `WORKFLOW_1.5.2.md` in the release archive.
 
-**Upgrading with duplicate glTFast GUID errors?** Read `UPGRADE_1.5.1.md` in the release archive. Keep only one glTFast variant; updating Meshy alone does not remove project dependencies.
+**Upgrading with duplicate glTFast GUID errors?** Read `UPGRADE_1.5.2.md` in the release archive. Keep only one glTFast variant; updating Meshy alone does not remove project dependencies.
 
 ## What it does
 
@@ -73,3 +73,13 @@ GitHub: https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity
 Unity 2020.3 LTS, 2021.3 LTS, 2022.3 LTS and Unity 6+ are supported by the native importer with no other packages. The optional UnityGLTF fallback uses 2.9.1-rc on 2020.3 and 2.21.0 on newer versions.
 
 For the best supported path, use a current Unity LTS release. See `../COMPATIBILITY.md` for details.
+
+## Advanced workflows in v1.5.2
+
+- **Material Overrides:** Select a standalone .mat asset per source material slot and Apply. Unique names remain matched even if slot order changes. Duplicate names use the source slot index and name; missing material overrides must be fixed before reimport.
+- **Editable copies:** Create Editable Copy (Prefab + Assets) generates independent meshes, textures, materials and a prefab in a unique folder under Assets/MeshyCustom. It never overwrites existing edited assets. Copies are deliberately independent of future source changes.
+- **Settings recovery:** Settings are stored in the model's .meta file, with the last successful native import snapshot also saved under ProjectSettings/MeshyImporter/LastSuccessful. Preserve .meta files and project backups to retain the original asset GUID and restore saved material references.
+- **Preflight:** Run Preflight checks structures, ranges, indices and scene references and identifies unsupported features. Unsupported content may require the GLB fallback. This structural check is not a full glTF security validator.
+- **Import summaries:** The inspector reports dimensions, bones, texture sizes, geometry counts and an estimated uncompressed texture memory footprint. The estimate is not measured GPU VRAM.
+
+v1.5.2 preserves Unity's existing ScriptedImporter cache revision 9 because the actual asset decode and build behaviour has not changed.

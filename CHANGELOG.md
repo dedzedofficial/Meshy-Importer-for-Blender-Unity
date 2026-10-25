@@ -1,4 +1,11 @@
-## Unreleased — browser capture and local-data clarity
+## 1.5.2 - 2026-10-25
+
+- Fix extension download instructions by using a version-pinned published release ZIP instead of pretending GitHub can directly install a browser extension.
+- Update all engine, decoder, browser and package versions to 1.5.2.
+- Clean up duplicated documentation, consolidate the Unity workflow notes, and rename the still-relevant glTFast repair guide.
+- Remove em dashes from active Markdown while preserving historical changelog version numbers.
+
+
 
 - Introduce a Chrome/Edge Manifest V3 extension that observes Meshy model responses already fetched by the open page, validates their `MESHY.AI` signature, deduplicates via a local SHA-256 fingerprint, and requests a properly named `.meshy` download.
 - Add an in-page ready popup, optional browser desktop notifications, local recent-capture history, switchable automatic downloads, and a save-again command.
@@ -9,7 +16,7 @@
 
 # Changelog
 
-## 1.5.1 — 2026-09-26
+## 1.5.1 : 2026-09-26
 
 Unity/glTFast maintenance and workflow release (version remains 1.5.1).
 
@@ -49,10 +56,10 @@ behavior; version metadata and bundled archives are synchronized.
 - Release failed image-load textures instead of leaving them allocated.
 - Add repair regression tests and a C# package-diagnostics test executable.
 
-See UPGRADE_1.5.1.md for the separate project repair step. The validation
+See UNITY_GLTFast_REPAIR.md for the separate project repair step. The validation
 workflow covers automated checks; Unity runtime verification is still required.
 
-## 1.5.0 — easier to use: clear errors, one-stop menus, presets, diagnostics
+## 1.5.0 : easier to use: clear errors, one-stop menus, presets, diagnostics
 
 ### Every engine
 - **Plain-language "wrong file" errors.** Instead of "missing MESHY.AI header", the importer now says what the file actually is (a saved web page, a JSON response, a GLB/FBX/OBJ download, a ZIP, an image, an empty or cut-off download) and how to fix it. Each message ends with a link to the matching part of `TROUBLESHOOTING.md`. Python, C# and GDScript share the same wording; CI checks that they agree.
@@ -94,7 +101,7 @@ workflow covers automated checks; Unity runtime verification is still required.
 - `TROUBLESHOOTING.md` has a "Wrong file errors" table that the error links point to.
 - Pushing a `v*` tag builds `Meshy-Importer-Blender.zip`, `Meshy-Importer-Unreal.zip` and a new `Meshy-Importer-Godot.zip`, and publishes a GitHub release. `PUBLISHING.md` covers OpenUPM, Blender Extensions and the Godot Asset Library.
 
-## 1.4.1 — one version for every host, UV auto-repair, Godot and Unreal
+## 1.4.1 : one version for every host, UV auto-repair, Godot and Unreal
 
 All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1.3.0.
 
@@ -341,7 +348,7 @@ All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1
 - Reverted an accidental `bl_info` minimum-version bump (was requiring Blender 5.2+, contradicting the documented 3.6 LTS+ legacy support and the Extension manifest's 4.2.0 floor). Blender 5.2+ remains a *recommendation* for `EXT_meshopt_compression` payloads, not a hard requirement.
 - Restored the Blender Help-menu (Support / Documentation) operators that CHANGELOG 1.1.0 already documented but had been dropped from source.
 - Added `blender_manifest.toml` as a tracked source file (previously only hand-embedded in the shipped ZIP, which let it silently drift from `bl_info`) and rebuilt the distributed ZIP from current source so the shipped package matches the repo.
-- Updated the Unity Package Manager git dependency pin, which had been stuck 2 commits behind and was missing `MeshyScriptedImporter.cs`, `MeshyAssetPostprocessor.cs`, `MeshySourceAsset.cs`, and `MeshySourceAssetEditor.cs` entirely — the reason `.meshy` files were importing as plain `DefaultAsset` instead of triggering automatic GLB reconstruction.
+- Updated the Unity Package Manager git dependency pin, which had been stuck 2 commits behind and was missing `MeshyScriptedImporter.cs`, `MeshyAssetPostprocessor.cs`, `MeshySourceAsset.cs`, and `MeshySourceAssetEditor.cs` entirely : the reason `.meshy` files were importing as plain `DefaultAsset` instead of triggering automatic GLB reconstruction.
 
 ## 1.1.0
 
@@ -357,7 +364,7 @@ All hosts now share one version number: **1.4.1**. Unity was 1.4.0 and Blender 1
 
 ### Blender workflow
 - Kept the Blender ZIP bundled inside the main distribution.
-- Updated the bundled Blender documentation for legacy 3.6–4.1 and modern 4.2+ Extension workflows.
+- Updated the bundled Blender documentation for legacy 3.6-4.1 and modern 4.2+ Extension workflows.
 - Added Blender Help-menu links for documentation and Patreon support.
 
 ### Documentation / discoverability

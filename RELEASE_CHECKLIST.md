@@ -13,11 +13,14 @@ Use this checklist before publishing a release.
 - [ ] `node --test tests/browser-extension.test.cjs` passes.
 - [ ] Load the unpacked `browser/` folder in Chrome/Edge, test a real Meshy asset, verify the saved file starts with `MESHY.AI`, test notifications, filename, duplicates, auto-download off/on, and a denied/blocked browser download.
 - [ ] Validate both the downloadable `downloads/Meshy-Importer-Browser.zip` and the release ZIP contain `manifest.json` at their root, and test loading the extracted ZIP unpacked in Chrome/Edge.
-- [ ] Test the prominent install badge in the GitHub README; confirm it downloads the archive and does not lead to a missing release.
+- [ ] Test the download badge in the GitHub README; confirm it downloads the archive and does not lead to a missing release.
 - [ ] `dotnet build tests/csharp/unity-compile` succeeds.
 - [ ] Rebuild the ZIPs with `python tools/build_zips.py`. `--check` must pass.
 - [ ] Run the repository validation workflow. It covers the checks above plus headless Blender and Godot imports.
 - [ ] Test a real `.meshy` payload in the supported Unity version, including an existing cached asset after an importer-version bump.
 - [ ] Test a real `.meshy` payload in Blender, Godot and Unreal.
-- [ ] Merge to `main`, then push the tag (`git tag vX.Y.Z && git push origin vX.Y.Z`). The Release workflow builds the Blender, Unreal and Godot ZIPs and publishes the GitHub release with the CHANGELOG section as notes.
+- [ ] Merge to `main`, then push the tag (`git tag vX.Y.Z && git push origin vX.Y.Z`). The Release workflow builds the Blender, Unreal, Godot and browser ZIPs and publishes the GitHub release with the CHANGELOG section as notes.
 - [ ] Upload the new Blender ZIP to extensions.blender.org and update the Godot Asset Library entry, if listed (see `PUBLISHING.md`).
+
+- [ ] Confirm the v1.5.2 GitHub release exists and every README download URL returns its actual binary asset.
+- [ ] Check no active Markdown contains em dashes or links to retired standalone guides.

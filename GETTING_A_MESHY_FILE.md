@@ -4,7 +4,7 @@
 
 ## Easier: use the local browser extension
 
-Install [FISHHWB Meshy Asset Capture](browser/README.md) in Chrome or Edge. Open or reload the finished model's Meshy page. When the page actually loads a genuine `MESHY.AI` payload, the extension shows a popup, requests a properly named `.meshy` download automatically (configurable), and can notify you on the desktop. **All model handling happens on your device**; the extension does not upload models. Meshy's website continues to use Meshy's own servers. It does not watch cloud generation jobs while your tab is closed.
+Install [FISHHWB Meshy Asset Capture v1.5.2](browser/README.md) in Chrome or Edge. Open or reload the finished model's Meshy page. When the page actually loads a genuine `MESHY.AI` payload, the extension shows a popup, requests a properly named `.meshy` download automatically (configurable), and can notify you on the desktop. **All model handling happens on your device**; the extension does not upload models. Meshy's website continues to use Meshy's own servers. It does not watch cloud generation jobs while your tab is closed.
 
 If your model is not captured, use the manual method below. The extension is optional.
 

@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Meshy Importer for Blender & Unity",
     "author": "FISHHWB | Ded Zed",
-    "version": (1, 5, 1),
+    "version": (1, 5, 2),
     "blender": (3, 6, 0),
     "location": "File > Import > Meshy Model (.meshy)",
     "description": "Imports Meshy .meshy containers locally through Blender's native GLB importer.",

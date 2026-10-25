@@ -23,11 +23,11 @@ test("produces safe deterministic filenames", () => {
   assert.equal(f.filename("../..\\bad:*?model", "1234"), "Meshy_bad_model_1234.meshy");
   assert.equal(f.filename("Meshy", "deadbeef"), "Meshy_Asset_deadbeef.meshy");
 });
-test("source browser ZIP is configured for committed direct installation", () => {
+test("browser ZIP is version-pinned to release download", () => {
   const build = fs.readFileSync(path.join(root, "tools/build_zips.py"), "utf8");
   assert.match(build, /downloads.*Meshy-Importer-Browser.zip/);
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
-  assert.match(readme, /downloads\/Meshy-Importer-Browser.zip\?raw=1/);
+  assert.match(readme, /releases\/download\/v1\.5\.2\/Meshy-Importer-Browser\.zip/);
 });
 test("extension is MV3 and limited to Meshy host", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "browser/manifest.json"), "utf8"));
