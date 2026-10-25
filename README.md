@@ -8,6 +8,9 @@ Import and convert Meshy `.meshy` assets on your own device. Unity, Blender, God
 
 ## Browser extension
 
+A browser-detecting installer page is prepared in [`site/`](site/README.md). Once repository GitHub Pages hosting is enabled and deployed, it can replace the badge below, route Chrome and Edge to the correct install method, and use real browser-store listings as they become available. Until then, this button intentionally points directly to the working v1.5.2 ZIP so visitors never encounter a broken installer page.
+
+
 [![Download Browser Extension v1.5.2](https://img.shields.io/badge/DOWNLOAD-Browser_Extension_v1.5.2-087ea4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip)
 
 **[Download the browser extension v1.5.2](https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/releases/download/v1.5.2/Meshy-Importer-Browser.zip)** | [Installation and privacy details](browser/README.md)
