@@ -67,7 +67,7 @@ def _source_bytes(path):
 
 def build(entries):
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(buf, "w") as zf:
         for arc, path in sorted(entries):
             data = _source_bytes(path)
             info = zipfile.ZipInfo(arc, FIXED_TIME)
@@ -89,8 +89,7 @@ def _zip_matches_sources(archive_path, entries):
     """Compare uncompressed files, not zlib-dependent ZIP byte streams."""
     try:
         with zipfile.ZipFile(archive_path) as zf:
-            expected_names = [arc for arc, _ in entries]
-            if sorted(zf.namelist()) != sorted(expected_names):
+            if sorted(zf.namelist()) != sorted(arc for arc, _ in entries):
                 return False
             for arc, path in entries:
                 if zf.read(arc) != _source_bytes(path):
