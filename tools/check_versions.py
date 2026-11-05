@@ -17,15 +17,19 @@ def _read(rel):
         return f.read()
 
 
+def _json_version(path, key="version"):
+    return json.loads(_read(path))[key]
+
+
 def _search(rel, pattern, flags=0):
     m = re.search(pattern, _read(rel), flags)
     return ".".join(g for g in m.groups() if g is not None) if m else None
 
 
 SOURCES = [
-    ("browser/manifest.json", lambda: json.loads(_read("browser/manifest.json"))["version"]),
-    ("unity/package.json", lambda: json.loads(_read("unity/package.json"))["version"]),
-    ("FISHHWB_METADATA.json", lambda: json.loads(_read("FISHHWB_METADATA.json"))["version"]),
+    ("browser/manifest.json", lambda: _json_version("browser/manifest.json")),
+    ("unity/package.json", lambda: _json_version("unity/package.json")),
+    ("FISHHWB_METADATA.json", lambda: _json_version("FISHHWB_METADATA.json")),
     ("blender/meshy_blender_importer/blender_manifest.toml",
      lambda: _search("blender/meshy_blender_importer/blender_manifest.toml", r'^version\s*=\s*"([^"]+)"', re.M)),
     ("blender/meshy_blender_importer/__init__.py (bl_info)",
@@ -39,7 +43,7 @@ SOURCES = [
     ("godot/addons/meshy_importer/meshy_support.gd",
      lambda: _search("godot/addons/meshy_importer/meshy_support.gd", r'^const VERSION := "([^"]+)"', re.M)),
     ("unreal/MeshyImporter/MeshyImporter.uplugin",
-     lambda: json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["VersionName"]),
+     lambda: _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "VersionName")),
     ("unreal/MeshyImporter/Content/Python/meshy_unreal.py",
      lambda: _search("unreal/MeshyImporter/Content/Python/meshy_unreal.py", r'^VERSION\s*=\s*"([^"]+)"', re.M)),
     ("unity/Editor/MeshyImporterMenu.cs (fallback)",
@@ -54,7 +58,7 @@ SOURCES = [
 
 
 def main():
-    expected = json.loads(_read("unity/package.json"))["version"]
+    expected = _json_version("unity/package.json")
     if len(sys.argv) > 1:
         print("Set version %s in:" % sys.argv[1])
         for name, _ in SOURCES:
