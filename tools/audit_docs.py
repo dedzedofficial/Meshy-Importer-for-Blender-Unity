@@ -1,7 +1,6 @@
 """Ensure the documentation does not regress to old versions or broken installer claims."""
 from pathlib import Path
 import json
-import re
 
 ROOT = Path(__file__).resolve().parents[1]
 for path in ROOT.rglob("*.md"):
@@ -10,9 +9,8 @@ for path in ROOT.rglob("*.md"):
         continue
     content = path.read_text(encoding="utf-8")
     assert "\u2014" not in content, f"Em dash in {rel}"
-    assert "downloads/Meshy-Importer-Browser.zip?raw=1" not in content, f"Old link in {rel}"
-    assert "WORKFLOW_1.5.1.md" not in content, f"Old workflow link in {rel}"
-    assert "UPGRADE_1.5.1.md" not in content, f"Old repair link in {rel}"
+    for obsolete in ("downloads/Meshy-Importer-Browser.zip?raw=1", "WORKFLOW_1.5.1.md", "UPGRADE_1.5.1.md"):
+        assert obsolete not in content, f"Obsolete {obsolete} in {rel}"
 
 version = json.loads((ROOT / "browser/manifest.json").read_text(encoding="utf-8"))["version"]
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
