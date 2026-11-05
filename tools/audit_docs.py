@@ -15,14 +15,13 @@ for path in ROOT.rglob("*.md"):
     assert "UPGRADE_1.5.1.md" not in content, f"Old repair link in {rel}"
 
 version = json.loads((ROOT / "browser/manifest.json").read_text(encoding="utf-8"))["version"]
-assert version == "1.5.2", version
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
-assert "**Version 1.5.2" in readme
-assert "releases/download/v1.5.2/Meshy-Importer-Browser.zip" in readme
+assert f"**Version {version}" in readme
+assert f"releases/download/v{version}/Meshy-Importer-Browser.zip" in readme
 assert "https://fishhwb.github.io/install/meshy/" in readme
 assert "site/README.md" not in readme
 assert "dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/" not in readme
 assert "Load unpacked" in readme
 assert not (ROOT / "WORKFLOW_1.5.1.md").exists()
 assert not (ROOT / "blender/README.md").exists()
-print("Documentation audit passed for v1.5.2.")
+print(f"Documentation audit passed for v{version}.")
