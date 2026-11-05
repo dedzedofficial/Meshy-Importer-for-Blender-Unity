@@ -37,9 +37,12 @@ def main(argv=None):
 
     failures = 0
     for path in args.inputs:
-        out = (os.path.join(args.output, os.path.splitext(os.path.basename(path))[0] + ".glb")
-               if args.output and os.path.isdir(args.output)
-               else args.output or os.path.splitext(path)[0] + ".glb")
+        if args.output and os.path.isdir(args.output):
+            out = os.path.join(args.output, os.path.splitext(os.path.basename(path))[0] + ".glb")
+        elif args.output:
+            out = args.output
+        else:
+            out = os.path.splitext(path)[0] + ".glb"
         t = time.time()
         try:
             glb = decode_meshy_file(path)
