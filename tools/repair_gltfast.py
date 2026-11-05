@@ -81,16 +81,15 @@ def inspect(project, keep="unity"):
             embedded.add(name)
     present = set(direct) | set(locked) | embedded
     kept = VARIANTS[keep]
-    removed = next(name for name in (UNITY, LEGACY) if name != kept)
+    removed = LEGACY if kept == UNITY else UNITY
     # Only packages reachable from a direct/embedded root can require removal targets.
     reachable = set()
-    todo = list((set(direct) | embedded) - {removed})
+    todo = (set(direct) | embedded) - {removed}
     while todo:
         name = todo.pop()
-        if name in reachable:
-            continue
-        reachable.add(name)
-        todo.extend(graph.get(name, ()))
+        if name not in reachable:
+            reachable.add(name)
+            todo.update(graph.get(name, ()))
     parents = sorted(name for name in reachable if name != removed and removed in graph.get(name, ()))
     blockers = []
     if (project / "Temp/UnityLockfile").exists():
@@ -100,7 +99,7 @@ def inspect(project, keep="unity"):
         blockers.append("Dependency graph is incomplete for: " + ", ".join(missing) + ". Resolve packages in Unity first.")
     if lock_bytes is None:
         blockers.append("packages-lock.json is missing; dependency safety cannot be established. Resolve packages in Unity first.")
-    if not {UNITY, LEGACY} <= present:
+    if not {UNITY, LEGACY}.issubset(present):
         blockers.append("Both package IDs are not present. No duplicate direct dependency to repair.")
     if removed in embedded:
         blockers.append(removed + " is embedded. Move/remove that embedded package manually after checking its dependants.")
