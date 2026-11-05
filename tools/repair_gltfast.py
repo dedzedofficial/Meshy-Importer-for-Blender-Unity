@@ -50,8 +50,8 @@ def inspect(project, keep="unity"):
     if any(not isinstance(v, str) for v in direct.values()):
         raise ValueError("Every manifest dependency must have a string version or URL")
     lock_path = project / "Packages/packages-lock.json"
-    locked = _deps(_object(lock_path), "packages-lock.json") if lock_path.exists() else {}
     lock_bytes = lock_path.read_bytes() if lock_path.exists() else None
+    locked = _deps(_object(lock_path), "packages-lock.json") if lock_bytes is not None else {}
     graph = {}
     for name, entry in locked.items():
         if not isinstance(entry, dict):
@@ -81,7 +81,7 @@ def inspect(project, keep="unity"):
             embedded.add(name)
     present = set(direct) | set(locked) | embedded
     kept = VARIANTS[keep]
-    removed = LEGACY if keep == "unity" else UNITY
+    removed = next(name for name in (UNITY, LEGACY) if name != kept)
     # Only packages reachable from a direct/embedded root can require removal targets.
     reachable = set()
     todo = list((set(direct) | embedded) - {removed})
@@ -95,7 +95,7 @@ def inspect(project, keep="unity"):
     blockers = []
     if (project / "Temp/UnityLockfile").exists():
         blockers.append("Unity appears open (Temp/UnityLockfile exists). Close the Editor first.")
-    missing = sorted((set(direct) | embedded) - set(graph))
+    missing = sorted((set(direct) | embedded) - graph.keys())
     if missing:
         blockers.append("Dependency graph is incomplete for: " + ", ".join(missing) + ". Resolve packages in Unity first.")
     if lock_bytes is None:
@@ -131,7 +131,8 @@ def apply(plan):
     backup = Path(tempfile.mkdtemp(prefix=stamp + "-", dir=str(backup_root)))
     (backup / "manifest.json").write_bytes(plan["original"])
     (backup / "packages-lock.json").write_bytes(plan["lock_bytes"])
-    manifest = json.loads(json.dumps(plan["manifest"]))
+    manifest = dict(plan["manifest"])
+    manifest["dependencies"] = dict(manifest["dependencies"])
     del manifest["dependencies"][plan["remove"]]
     newline = "\r\n" if b"\r\n" in plan["original"] else "\n"
     payload = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").replace("\n", newline).encode("utf-8")
