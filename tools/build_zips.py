@@ -94,10 +94,10 @@ RELEASE_ASSETS = {
 }
 
 
-def _zip_matches_sources(archive, entries):
+def _zip_matches_sources(archive_path, entries):
     """Compare uncompressed files, not zlib-dependent ZIP byte streams."""
     try:
-        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
+        with zipfile.ZipFile(archive_path) as zf:
             expected_names = [arc for arc, _ in entries]
             if sorted(zf.namelist()) != sorted(expected_names):
                 return False
@@ -126,12 +126,7 @@ def main():
         entries = collect()
         rel = os.path.relpath(out, ROOT)
         if args.check:
-            try:
-                with open(out, "rb") as f:
-                    current = f.read()
-            except OSError:
-                current = b""
-            if not _zip_matches_sources(current, entries):
+            if not _zip_matches_sources(out, entries):
                 print("%s is out of date. Run: python tools/build_zips.py" % rel, file=sys.stderr)
                 stale += 1
             else:
