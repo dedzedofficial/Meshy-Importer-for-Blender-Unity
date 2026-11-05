@@ -70,14 +70,17 @@ PACKAGES = {
 }
 
 
+def _source_bytes(path):
+    with open(path, "rb") as handle:
+        data = handle.read()
+    return data if path.endswith((".png", ".webp", ".zip")) else data.replace(b"\r\n", b"\n")
+
+
 def build(entries):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for arc, path in sorted(entries):
-            with open(path, "rb") as f:
-                data = f.read()
-            if not path.endswith((".png", ".webp", ".zip")):
-                data = data.replace(b"\r\n", b"\n")
+            data = _source_bytes(path)
             info = zipfile.ZipInfo(arc, FIXED_TIME)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
@@ -101,11 +104,7 @@ def _zip_matches_sources(archive, entries):
             if sorted(zf.namelist()) != sorted(expected_names):
                 return False
             for arc, path in entries:
-                with open(path, "rb") as f:
-                    expected = f.read()
-                if not path.endswith((".png", ".webp", ".zip")):
-                    expected = expected.replace(b"\r\n", b"\n")
-                if zf.read(arc) != expected:
+                if zf.read(arc) != _source_bytes(path):
                     return False
         return True
     except (OSError, ValueError, zipfile.BadZipFile, KeyError):
@@ -127,7 +126,6 @@ def main():
     stale = 0
     for out, collect in PACKAGES.items():
         entries = collect()
-        data = build(entries)
         rel = os.path.relpath(out, ROOT)
         if args.check:
             try:
@@ -141,6 +139,7 @@ def main():
             else:
                 print("%s is up to date (%d files)." % (rel, len(entries)))
         else:
+            data = build(entries)
             os.makedirs(os.path.dirname(out), exist_ok=True)
             with open(out, "wb") as f:
                 f.write(data)
