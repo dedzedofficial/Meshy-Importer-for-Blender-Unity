@@ -17,8 +17,7 @@ def _read(rel):
         return f.read()
 
 
-def _json_version(path, key="version"):
-    return json.loads(_read(path))[key]
+def _json_version(path, key="version"): return json.loads(_read(path))[key]
 
 
 def _search(rel, pattern, flags=0):
