@@ -61,21 +61,21 @@ def main():
             print("  " + name)
         print("and the Unreal .uplugin integer \"Version\" (e.g. 1.4.2 -> 142).")
         return 0
-    mismatches = []
+    bad = 0
     for name, get in SOURCES:
         try:
             found = get()
         except Exception as exc:  # missing file / field
             found = "error: %s" % exc
         if found != expected:
-            mismatches.append(name)
+            bad += 1
         print("%-60s %-10s %s" % (name, found, "ok" if found == expected else "MISMATCH"))
     uplugin = json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["Version"]
     if uplugin != int(expected.replace(".", "")):
         print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, expected.replace(".", "")))
-        mismatches.append("unreal/MeshyImporter/MeshyImporter.uplugin Version")
-    print("All versions are %s." % expected if not mismatches else "%d version mismatch(es)." % len(mismatches))
-    return int(bool(mismatches))
+        bad += 1
+    print("All versions are %s." % expected if not bad else "%d version mismatch(es)." % bad)
+    return int(bad > 0)
 
 
 if __name__ == "__main__":
