@@ -36,9 +36,7 @@ def _tree(src_dir, arc_prefix):
     entries = []
     for dirpath, dirnames, filenames in os.walk(src_dir):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
-        for name in sorted(filenames):
-            if name.endswith(".pyc"):
-                continue
+        for name in sorted(f for f in filenames if not f.endswith(".pyc")):
             path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, src_dir).replace(os.sep, "/")
             entries.append((arc_prefix + rel, path))
