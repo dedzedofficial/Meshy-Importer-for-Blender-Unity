@@ -57,7 +57,14 @@ SOURCES = [
 
 
 def main():
-    expected = _json_version("unity/package.json")
+    try:
+        expected = _json_version("unity/package.json")
+    except (OSError, ValueError, KeyError) as exc:
+        print("Cannot read unity/package.json version: %s" % exc)
+        return 1
+    if not isinstance(expected, str) or not re.fullmatch(r"\d+\.\d+\.\d+", expected):
+        print("Invalid unity/package.json version: %r" % expected)
+        return 1
     if len(sys.argv) > 1:
         print("Set version %s in:" % sys.argv[1])
         for name, _ in SOURCES:
@@ -74,9 +81,6 @@ def main():
         bad += not matches
         print("%-60s %-10s %s" % (name, found, "ok" if matches else "MISMATCH"))
     numeric_version = expected.replace(".", "")
-    if not numeric_version.isdecimal():
-        print("Invalid unity/package.json version: %r" % expected)
-        return 1
     try:
         uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
     except (OSError, ValueError, KeyError) as exc:
