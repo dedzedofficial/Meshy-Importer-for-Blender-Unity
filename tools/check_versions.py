@@ -73,7 +73,7 @@ def main():
         if found != expected:
             bad += 1
         print("%-60s %-10s %s" % (name, found, "ok" if found == expected else "MISMATCH"))
-    uplugin = json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["Version"]
+    uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
     if uplugin != int(expected.replace(".", "")):
         print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, expected.replace(".", "")))
         bad += 1
