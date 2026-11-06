@@ -8,6 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def require(condition, message):
     if not condition:
         raise SystemExit(message)
+
+
 for path in ROOT.rglob("*.md"):
     rel = path.relative_to(ROOT)
     if any(part in {".git", ".venv", "bin", "obj", "Library", "Temp"} for part in rel.parts):
@@ -28,6 +30,6 @@ for needle, present in (
     ("Load unpacked", True),
 ):
     require((needle in readme) == present, f"Documentation audit failed: {needle!r} {'missing' if present else 'unexpected'} in README.md")
-require(not (ROOT / "WORKFLOW_1.5.1.md").exists(), "Documentation audit failed: not (ROOT / 'WORKFLOW_1.5.1.md').exists()")
-require(not (ROOT / "blender/README.md").exists(), "Documentation audit failed: not (ROOT / 'blender/README.md').exists()")
+for obsolete in ("WORKFLOW_1.5.1.md", "blender/README.md"):
+    require(not (ROOT / obsolete).exists(), f"Documentation audit failed: obsolete file {obsolete}")
 print(f"Documentation audit passed for v{version}.")
