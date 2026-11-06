@@ -62,7 +62,11 @@ PACKAGES = {
 def _source_bytes(path):
     with open(path, "rb") as handle:
         data = handle.read()
-    return data if path.endswith((".png", ".webp", ".zip")) else data.replace(b"\r\n", b"\n")
+    # Normalize line endings only for known text sources; never rewrite binary payloads.
+    text_exts = (".py", ".json", ".toml", ".md", ".txt", ".gd", ".cfg",
+                 ".cs", ".js", ".html", ".css", ".uplugin", ".meta", ".xml",
+                 ".shader", ".asmdef", ".yml", ".yaml", ".gitignore")
+    return data.replace(b"\r\n", b"\n") if path.lower().endswith(text_exts) else data
 
 
 def build(entries):
