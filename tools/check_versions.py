@@ -17,15 +17,18 @@ def _read(rel):
         return f.read()
 
 
+def _json_version(path, key="version"): return json.loads(_read(path))[key]
+
+
 def _search(rel, pattern, flags=0):
     m = re.search(pattern, _read(rel), flags)
     return ".".join(g for g in m.groups() if g is not None) if m else None
 
 
 SOURCES = [
-    ("browser/manifest.json", lambda: json.loads(_read("browser/manifest.json"))["version"]),
-    ("unity/package.json", lambda: json.loads(_read("unity/package.json"))["version"]),
-    ("FISHHWB_METADATA.json", lambda: json.loads(_read("FISHHWB_METADATA.json"))["version"]),
+    ("browser/manifest.json", lambda: _json_version("browser/manifest.json")),
+    ("unity/package.json", lambda: _json_version("unity/package.json")),
+    ("FISHHWB_METADATA.json", lambda: _json_version("FISHHWB_METADATA.json")),
     ("blender/meshy_blender_importer/blender_manifest.toml",
      lambda: _search("blender/meshy_blender_importer/blender_manifest.toml", r'^version\s*=\s*"([^"]+)"', re.M)),
     ("blender/meshy_blender_importer/__init__.py (bl_info)",
@@ -39,7 +42,7 @@ SOURCES = [
     ("godot/addons/meshy_importer/meshy_support.gd",
      lambda: _search("godot/addons/meshy_importer/meshy_support.gd", r'^const VERSION := "([^"]+)"', re.M)),
     ("unreal/MeshyImporter/MeshyImporter.uplugin",
-     lambda: json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["VersionName"]),
+     lambda: _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "VersionName")),
     ("unreal/MeshyImporter/Content/Python/meshy_unreal.py",
      lambda: _search("unreal/MeshyImporter/Content/Python/meshy_unreal.py", r'^VERSION\s*=\s*"([^"]+)"', re.M)),
     ("unity/Editor/MeshyImporterMenu.cs (fallback)",
@@ -54,8 +57,18 @@ SOURCES = [
 
 
 def main():
-    expected = json.loads(_read("unity/package.json"))["version"]
+    try:
+        expected = _json_version("unity/package.json")
+    except (OSError, ValueError, KeyError) as exc:
+        print("Cannot read unity/package.json version: %s" % exc)
+        return 1
+    if not isinstance(expected, str) or not re.fullmatch(r"\d+\.\d+\.\d+", expected):
+        print("Invalid unity/package.json version: %r" % expected)
+        return 1
     if len(sys.argv) > 1:
+        if len(sys.argv) != 2 or not re.fullmatch(r"\d+\.\d+\.\d+", sys.argv[1]):
+            print("Usage: python tools/check_versions.py [MAJOR.MINOR.PATCH]")
+            return 2
         print("Set version %s in:" % sys.argv[1])
         for name, _ in SOURCES:
             print("  " + name)
@@ -67,16 +80,19 @@ def main():
             found = get()
         except Exception as exc:  # missing file / field
             found = "error: %s" % exc
-        status = "ok" if found == expected else "MISMATCH"
-        if found != expected:
-            bad += 1
-        print("%-60s %-10s %s" % (name, found, status))
-    uplugin = json.loads(_read("unreal/MeshyImporter/MeshyImporter.uplugin"))["Version"]
-    if uplugin != int(expected.replace(".", "")):
-        print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, expected.replace(".", "")))
+        matches = found == expected
+        bad += not matches
+        print("%-60s %-10s %s" % (name, found, "ok" if matches else "MISMATCH"))
+    numeric_version = expected.replace(".", "")
+    try:
+        uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
+    except (OSError, ValueError, KeyError) as exc:
+        uplugin = "error: %s" % exc
+    if uplugin != int(numeric_version):
+        print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, numeric_version))
         bad += 1
     print("All versions are %s." % expected if not bad else "%d version mismatch(es)." % bad)
-    return 1 if bad else 0
+    return int(bad > 0)
 
 
 if __name__ == "__main__":

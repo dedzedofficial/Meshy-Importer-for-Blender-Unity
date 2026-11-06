@@ -36,9 +36,7 @@ def _tree(src_dir, arc_prefix):
     entries = []
     for dirpath, dirnames, filenames in os.walk(src_dir):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
-        for name in sorted(filenames):
-            if name.endswith(".pyc"):
-                continue
+        for name in sorted(f for f in filenames if not f.endswith(".pyc")):
             path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, src_dir).replace(os.sep, "/")
             entries.append((arc_prefix + rel, path))
@@ -50,15 +48,6 @@ def _core(arc_prefix):
             for name in sorted(os.listdir(CORE)) if name.endswith(".py")]
 
 
-def _godot():
-    return _tree(os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
-
-
-def _browser():
-    # Unpacked Chromium extension: manifest.json must be at archive root.
-    return _tree(os.path.join(ROOT, "browser"), "")
-
-
 PACKAGES = {
     os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip"): lambda: (
         _tree(os.path.join(ROOT, "blender", "meshy_blender_importer"), "meshy_blender_importer/")
@@ -66,18 +55,28 @@ PACKAGES = {
     os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip"): lambda: (
         _tree(os.path.join(ROOT, "unreal", "MeshyImporter"), "MeshyImporter/")
         + _core("MeshyImporter/Content/Python/meshy_core/")),
-    os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip"): _browser,
+    os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip"): lambda: _tree(os.path.join(ROOT, "browser"), ""),
 }
 
 
+def _source_bytes(path):
+    with open(path, "rb") as handle:
+        data = handle.read()
+    # Normalize line endings only for known text sources; never rewrite binary payloads.
+    text_exts = (".py", ".json", ".toml", ".md", ".txt", ".gd", ".cfg",
+                 ".cs", ".js", ".html", ".css", ".uplugin", ".meta", ".xml",
+                 ".shader", ".asmdef", ".yml", ".yaml", ".gitignore")
+    return data.replace(b"\r\n", b"\n") if path.lower().endswith(text_exts) else data
+
+
 def build(entries):
+    names = [arc for arc, _ in entries]
+    if len(names) != len(set(names)):
+        raise ValueError("Duplicate archive paths in package inputs")
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(buf, "w") as zf:
         for arc, path in sorted(entries):
-            with open(path, "rb") as f:
-                data = f.read()
-            if not path.endswith((".png", ".webp", ".zip")):
-                data = data.replace(b"\r\n", b"\n")
+            data = _source_bytes(path)
             info = zipfile.ZipInfo(arc, FIXED_TIME)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
@@ -86,26 +85,24 @@ def build(entries):
 
 
 RELEASE_ASSETS = {
-    "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
-    "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
-    "Meshy-Importer-Godot.zip": _godot,
-    "Meshy-Importer-Browser.zip": PACKAGES[os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip")],
+    "Meshy-Importer-" + host + ".zip": PACKAGES[path]
+    for host, path in zip(("Blender", "Unreal", "Browser"), PACKAGES)
 }
+RELEASE_ASSETS["Meshy-Importer-Godot.zip"] = lambda: _tree(
+    os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
 
 
-def _zip_matches_sources(archive, entries):
+def _zip_matches_sources(archive_path, entries):
     """Compare uncompressed files, not zlib-dependent ZIP byte streams."""
+    names = [arc for arc, _ in entries]
+    if len(names) != len(set(names)):
+        return False
     try:
-        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
-            expected_names = [arc for arc, _ in entries]
-            if sorted(zf.namelist()) != sorted(expected_names):
+        with zipfile.ZipFile(archive_path) as zf:
+            if sorted(zf.namelist()) != sorted(arc for arc, _ in entries):
                 return False
             for arc, path in entries:
-                with open(path, "rb") as f:
-                    expected = f.read()
-                if not path.endswith((".png", ".webp", ".zip")):
-                    expected = expected.replace(b"\r\n", b"\n")
-                if zf.read(arc) != expected:
+                if zf.read(arc) != _source_bytes(path):
                     return False
         return True
     except (OSError, ValueError, zipfile.BadZipFile, KeyError):
@@ -113,8 +110,9 @@ def _zip_matches_sources(archive, entries):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true", help="verify the committed ZIPs are up to date")
-    ap.add_argument("--release", metavar="DIR", help="write the release assets into DIR instead")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="verify the committed ZIPs are up to date")
+    mode.add_argument("--release", metavar="DIR", help="write the release assets into DIR instead")
     args = ap.parse_args()
     if args.release:
         os.makedirs(args.release, exist_ok=True)
@@ -127,20 +125,15 @@ def main():
     stale = 0
     for out, collect in PACKAGES.items():
         entries = collect()
-        data = build(entries)
         rel = os.path.relpath(out, ROOT)
         if args.check:
-            try:
-                with open(out, "rb") as f:
-                    current = f.read()
-            except OSError:
-                current = b""
-            if not _zip_matches_sources(current, entries):
+            if not _zip_matches_sources(out, entries):
                 print("%s is out of date. Run: python tools/build_zips.py" % rel, file=sys.stderr)
                 stale += 1
             else:
                 print("%s is up to date (%d files)." % (rel, len(entries)))
         else:
+            data = build(entries)
             os.makedirs(os.path.dirname(out), exist_ok=True)
             with open(out, "wb") as f:
                 f.write(data)
