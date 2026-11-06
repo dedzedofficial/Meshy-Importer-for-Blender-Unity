@@ -19,12 +19,15 @@ for path in ROOT.rglob("*.md"):
 
 version = json.loads((ROOT / "browser/manifest.json").read_text(encoding="utf-8"))["version"]
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
-require(f"**Version {version}" in readme, "Documentation audit failed: f'**Version {version}' in readme")
-require(f"releases/download/v{version}/Meshy-Importer-Browser.zip" in readme, "Documentation audit failed: f'releases/download/v{version}/Meshy-Importer-Browser.zip' in readme")
-require("https://fishhwb.github.io/install/meshy/" in readme, "Documentation audit failed: 'https://fishhwb.github.io/install/meshy/' in readme")
-require("site/README.md" not in readme, "Documentation audit failed: 'site/README.md' not in readme")
-require("dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/" not in readme, "Documentation audit failed: 'dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/' not in readme")
-require("Load unpacked" in readme, "Documentation audit failed: 'Load unpacked' in readme")
+for needle, present in (
+    (f"**Version {version}", True),
+    (f"releases/download/v{version}/Meshy-Importer-Browser.zip", True),
+    ("https://fishhwb.github.io/install/meshy/", True),
+    ("site/README.md", False),
+    ("dedzedofficial.github.io/Meshy-Importer-for-Blender-Unity/", False),
+    ("Load unpacked", True),
+):
+    require((needle in readme) == present, f"Documentation audit failed: {needle!r} {'missing' if present else 'unexpected'} in README.md")
 require(not (ROOT / "WORKFLOW_1.5.1.md").exists(), "Documentation audit failed: not (ROOT / 'WORKFLOW_1.5.1.md').exists()")
 require(not (ROOT / "blender/README.md").exists(), "Documentation audit failed: not (ROOT / 'blender/README.md').exists()")
 print(f"Documentation audit passed for v{version}.")
