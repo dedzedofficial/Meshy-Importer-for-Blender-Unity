@@ -66,6 +66,9 @@ def main():
         print("Invalid unity/package.json version: %r" % expected)
         return 1
     if len(sys.argv) > 1:
+        if len(sys.argv) != 2 or not re.fullmatch(r"\d+\.\d+\.\d+", sys.argv[1]):
+            print("Usage: python tools/check_versions.py [MAJOR.MINOR.PATCH]")
+            return 2
         print("Set version %s in:" % sys.argv[1])
         for name, _ in SOURCES:
             print("  " + name)
