@@ -73,8 +73,11 @@ def main():
         matches = found == expected
         bad += not matches
         print("%-60s %-10s %s" % (name, found, "ok" if matches else "MISMATCH"))
-    uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
     numeric_version = expected.replace(".", "")
+    try:
+        uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
+    except (OSError, ValueError, KeyError) as exc:
+        uplugin = "error: %s" % exc
     if uplugin != int(numeric_version):
         print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, numeric_version))
         bad += 1
