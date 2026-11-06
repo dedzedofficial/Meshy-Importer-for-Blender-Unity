@@ -70,12 +70,13 @@ def main():
             found = get()
         except Exception as exc:  # missing file / field
             found = "error: %s" % exc
-        if found != expected:
-            bad += 1
-        print("%-60s %-10s %s" % (name, found, "ok" if found == expected else "MISMATCH"))
+        matches = found == expected
+        bad += not matches
+        print("%-60s %-10s %s" % (name, found, "ok" if matches else "MISMATCH"))
     uplugin = _json_version("unreal/MeshyImporter/MeshyImporter.uplugin", "Version")
-    if uplugin != int(expected.replace(".", "")):
-        print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, expected.replace(".", "")))
+    numeric_version = expected.replace(".", "")
+    if uplugin != int(numeric_version):
+        print("unreal/MeshyImporter/MeshyImporter.uplugin \"Version\" %s should be %s" % (uplugin, numeric_version))
         bad += 1
     print("All versions are %s." % expected if not bad else "%d version mismatch(es)." % bad)
     return int(bad > 0)
