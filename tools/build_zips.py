@@ -100,8 +100,9 @@ def _zip_matches_sources(archive_path, entries):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true", help="verify the committed ZIPs are up to date")
-    ap.add_argument("--release", metavar="DIR", help="write the release assets into DIR instead")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="verify the committed ZIPs are up to date")
+    mode.add_argument("--release", metavar="DIR", help="write the release assets into DIR instead")
     args = ap.parse_args()
     if args.release:
         os.makedirs(args.release, exist_ok=True)
