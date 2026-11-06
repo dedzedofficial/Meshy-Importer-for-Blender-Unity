@@ -81,11 +81,11 @@ def build(entries):
 
 
 RELEASE_ASSETS = {
-    "Meshy-Importer-Blender.zip": PACKAGES[os.path.join(ROOT, "blender", "Meshy Importer for Blender & Unity - Blender.zip")],
-    "Meshy-Importer-Unreal.zip": PACKAGES[os.path.join(ROOT, "unreal", "Meshy Importer for Unreal.zip")],
-    "Meshy-Importer-Godot.zip": lambda: _tree(os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/"),
-    "Meshy-Importer-Browser.zip": PACKAGES[os.path.join(ROOT, "downloads", "Meshy-Importer-Browser.zip")],
+    "Meshy-Importer-" + host + ".zip": PACKAGES[path]
+    for host, path in zip(("Blender", "Unreal", "Browser"), PACKAGES)
 }
+RELEASE_ASSETS["Meshy-Importer-Godot.zip"] = lambda: _tree(
+    os.path.join(ROOT, "godot", "addons", "meshy_importer"), "addons/meshy_importer/")
 
 
 def _zip_matches_sources(archive_path, entries):
