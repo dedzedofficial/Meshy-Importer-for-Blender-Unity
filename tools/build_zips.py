@@ -66,6 +66,9 @@ def _source_bytes(path):
 
 
 def build(entries):
+    names = [arc for arc, _ in entries]
+    if len(names) != len(set(names)):
+        raise ValueError("Duplicate archive paths in package inputs")
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         for arc, path in sorted(entries):
@@ -87,6 +90,9 @@ RELEASE_ASSETS = {
 
 def _zip_matches_sources(archive_path, entries):
     """Compare uncompressed files, not zlib-dependent ZIP byte streams."""
+    names = [arc for arc, _ in entries]
+    if len(names) != len(set(names)):
+        return False
     try:
         with zipfile.ZipFile(archive_path) as zf:
             if sorted(zf.namelist()) != sorted(arc for arc, _ in entries):
