@@ -10,9 +10,10 @@ def require(condition, message):
         raise SystemExit(message)
 
 
+SKIP_DIRS = {".git", ".venv", "bin", "obj", "Library", "Temp"}
 for path in ROOT.rglob("*.md"):
     rel = path.relative_to(ROOT)
-    if any(part in {".git", ".venv", "bin", "obj", "Library", "Temp"} for part in rel.parts):
+    if not SKIP_DIRS.isdisjoint(rel.parts):
         continue
     content = path.read_text(encoding="utf-8")
     require("\u2014" not in content, f"Em dash in {rel}")
