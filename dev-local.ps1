@@ -8,10 +8,10 @@ function Run-Python([string[]]$Arguments) {
 }
 Push-Location $Root
 try {
-    Run-Python @('tools/check_versions.py')
-    Run-Python @('tools/audit_docs.py')
-    Run-Python @('tools/build_zips.py', '--check')
-    Run-Python @('-m', 'unittest', 'discover', '-s', 'tests', '-v')
-    if ($Build) { Run-Python @('tools/build_zips.py', '--release', 'dist') }
+    Run-Python -Arguments @('tools/check_versions.py')
+    Run-Python -Arguments @('tools/audit_docs.py')
+    Run-Python -Arguments @('tools/build_zips.py', '--check')
+    Run-Python -Arguments @('-m', 'unittest', 'discover', '-s', 'tests', '-v')
+    if ($Build) { Run-Python -Arguments @('tools/build_zips.py', '--release', 'dist') }
     Write-Host "Local Meshy checks passed. GitHub Actions was not used."
 } finally { Pop-Location }
