@@ -5,8 +5,7 @@ name: Release
 # point at releases/latest/download/<asset>, so they update automatically.
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
