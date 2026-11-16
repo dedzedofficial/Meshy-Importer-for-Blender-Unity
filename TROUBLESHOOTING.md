@@ -27,7 +27,7 @@ These mean the file isn't a `.meshy` model. The message says what the file actua
 | "This is an FBX file" / "This is an OBJ file" | It's a normal download renamed to `.meshy`. | Rename it back and import it directly. |
 | "This is a ZIP archive" | Meshy downloads can come zipped. | Unzip it and import the `.glb`/`.fbx`/`.obj` inside. |
 | "This is an image" | You saved a texture request. | Pick the model request instead. |
-| "The .meshy file is cut off" | The download stopped early. | Save the response again and check the file size (usually several MB). |
+| "The .meshy file is cut off" | There are not enough bytes even for a minimal Meshy container. | Save the response again; otherwise check its header and report it. Models smaller than 8 KiB may be valid. |
 | "The file is empty" | The download failed. | Save the response again. |
 | "This is not a .meshy file" | Something else entirely. | Save the model request's response again; a real `.meshy` starts with `MESHY.AI`. |
 

@@ -29,7 +29,7 @@ static func _starts_with(data: PackedByteArray, offset: int, ascii: String) -> b
 ## looks like a complete container. Port of core/python/meshy_core/decode.py
 ## describe_wrong_file; keep the wording in sync.
 static func describe_wrong_file(data: PackedByteArray) -> String:
-	var min_size := HEADER_SIZE + ENCRYPTED_SIZE + TAG_SIZE
+	var min_size := HEADER_SIZE + 12 + TAG_SIZE
 	if data.is_empty():
 		return "The file is empty. The download probably failed; save the model response again."
 	if _starts_with(data, 0, MAGIC):
@@ -69,9 +69,14 @@ static func decode(data: PackedByteArray) -> Dictionary:
 	if problem != "":
 		return {"error": problem + " Help: " + HELP_WRONG_FILE}
 	var nonce := data.slice(10, 22)
+	# The encrypted prefix ends early for GLBs smaller than 8192 bytes.
+	# AESContext processes complete 16-byte blocks, so round up the keystream
+	# buffer while XORing only the bytes actually present in the file.
+	var encrypted_size: int = mini(ENCRYPTED_SIZE, data.size() - HEADER_SIZE - TAG_SIZE)
+	var block_count: int = ceili(float(encrypted_size) / 16.0)
 	var counters := PackedByteArray()
-	counters.resize(ENCRYPTED_SIZE)
-	for block in ENCRYPTED_SIZE / 16:
+	counters.resize(block_count * 16)
+	for block in block_count:
 		var off := block * 16
 		for k in 12:
 			counters[off + k] = nonce[k]
@@ -84,10 +89,10 @@ static func decode(data: PackedByteArray) -> Dictionary:
 	aes.start(AESContext.MODE_ECB_ENCRYPT, KEY.to_ascii_buffer())
 	var keystream := aes.update(counters)
 	aes.finish()
-	var glb := data.slice(HEADER_SIZE, HEADER_SIZE + ENCRYPTED_SIZE)
-	for i in ENCRYPTED_SIZE:
+	var glb := data.slice(HEADER_SIZE, HEADER_SIZE + encrypted_size)
+	for i in encrypted_size:
 		glb[i] = glb[i] ^ keystream[i]
-	glb.append_array(data.slice(HEADER_SIZE + ENCRYPTED_SIZE + TAG_SIZE))
+	glb.append_array(data.slice(HEADER_SIZE + encrypted_size + TAG_SIZE))
 	if glb.slice(0, 4).get_string_from_ascii() != "glTF":
 		return {"error": "Meshy decryption produced an invalid GLB header. Meshy may have changed the .meshy format; update the importer or report the file. Help: " + HELP_FORMAT_CHANGED}
 	glb.encode_u32(8, glb.size())

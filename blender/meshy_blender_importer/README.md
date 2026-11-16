@@ -65,9 +65,9 @@ The decoder runs locally. The `.meshy` model is not uploaded by this add-on. The
 The current reverse-engineered format describes:
 - `MESHY.AI` magic at bytes 0-7
 - 12-byte nonce at bytes 10-21
-- 8192-byte AES-CTR encrypted prefix
-- 16-byte authentication/tag area
-- plaintext remainder
+- AES-CTR encrypted prefix of up to 8192 bytes (shorter for small models)
+- 16-byte authentication/tag area immediately after that prefix
+- plaintext remainder, if the GLB exceeds 8192 bytes
 - `EXT_meshopt_compression` in the resulting GLB
 
 The fixed AES-256 key used by the current format is the literal 32-byte prefix documented by the reverse-engineered implementation.

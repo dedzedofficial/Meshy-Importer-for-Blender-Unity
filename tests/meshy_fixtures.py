@@ -145,8 +145,8 @@ def build_glb(broken_uvs=False, with_texture=True):
 
     js = json.dumps(gltf).encode("utf-8")
     js += b" " * ((4 - len(js) % 4) % 4)
-    # Real payloads are always larger than the 8 KiB encrypted prefix; pad the JSON so
-    # the fixture is too (JSON chunks may be padded with spaces).
+    # Keep this fixture over 8 KiB to exercise the unencrypted tail as well.
+    # Small real-world models are separately covered by test_decode.py.
     js += b" " * max(0, 9000 - len(js) - len(blob))
     js += b" " * ((4 - len(js) % 4) % 4)
     body = struct.pack("<I4s", len(js), b"JSON") + js + struct.pack("<I4s", len(blob), b"BIN\x00") + bytes(blob)
@@ -161,7 +161,7 @@ def build_meshy(broken_uvs=False, with_texture=True, nonce=b"\x07" * 12):
 # test_decode.py and cross_check_wrong_file.py (C# and GDScript ports).
 WRONG_FILE_CASES = [
     (b"", "empty"),
-    (b"MESHY.AI" + b"\x00" * 100, "cut off"),
+    (b"MESHY.AI" + b"\x00" * 20, "cut off"),
     (b"\n  <!DOCTYPE html><html><body>Meshy</body></html>", "web page"),
     (b'{"result": {"model_urls": {}}}', "JSON"),
     (b"Kaydara FBX Binary  \x00\x1a\x00", "FBX"),
