@@ -24,7 +24,9 @@ from meshy_fixtures import WRONG_FILE_CASES  # noqa: E402
 
 def _inputs():
     valid = encode_meshy_bytes(b"glTF\x02\x00\x00\x00" + b"\x00" * 9000)
-    return [data for data, _ in WRONG_FILE_CASES] + [valid, b"\xef\xbb\xbf<html>"]
+    small_glb = b"glTF" + (2).to_bytes(4, "little") + (7756).to_bytes(4, "little") + b"\x00" * 7744
+    small_valid = encode_meshy_bytes(small_glb)
+    return [data for data, _ in WRONG_FILE_CASES] + [valid, small_valid, b"\xef\xbb\xbf<html>"]
 
 
 def _compare(name, ref, got):

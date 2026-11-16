@@ -426,11 +426,16 @@ namespace FISHHWB.MeshyImporter.Editor
             byte[] nonce = new byte[12];
             Buffer.BlockCopy(data, 10, nonce, 0, 12);
 
-            byte[] encrypted = new byte[8192];
-            Buffer.BlockCopy(data, 32, encrypted, 0, 8192);
+            // Meshy encrypts at most 8192 bytes. Small GLBs have a shorter
+            // encrypted prefix, followed immediately by the 16-byte tag.
+            const int headerSize = 32, tagSize = 16, encryptedLimit = 8192;
+            int encryptedSize = Math.Min(encryptedLimit, data.Length - headerSize - tagSize);
+            byte[] encrypted = new byte[encryptedSize];
+            Buffer.BlockCopy(data, headerSize, encrypted, 0, encryptedSize);
 
-            byte[] tail = new byte[data.Length - (32 + 8192 + 16)];
-            Buffer.BlockCopy(data, 32 + 8192 + 16, tail, 0, tail.Length);
+            int tailOffset = headerSize + encryptedSize + tagSize;
+            byte[] tail = new byte[data.Length - tailOffset];
+            Buffer.BlockCopy(data, tailOffset, tail, 0, tail.Length);
 
             byte[] first = AesCtr(encrypted,
                 Encoding.UTF8.GetBytes("JSON{\"accessors\":[{\"bufferView\":"),

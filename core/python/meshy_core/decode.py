@@ -1,12 +1,12 @@
 """Meshy .meshy container -> GLB bytes.
 
-A .meshy file is a GLB whose first 8192 bytes are AES-256-CTR encrypted:
+A .meshy file is a GLB whose first up to 8192 bytes are AES-256-CTR encrypted:
 
     offset 0   "MESHY.AI"                     8-byte magic
     offset 10  nonce                          12 bytes
-    offset 32  encrypted GLB prefix           8192 bytes
-    offset 8224 tag                           16 bytes (ignored)
-    offset 8240 rest of the GLB, in the clear
+    offset 32      encrypted GLB prefix       min(GLB size, 8192) bytes
+    offset 32 + N  tag                        16 bytes (ignored)
+    offset 48 + N  rest of the GLB, in the clear
 
 The counter block is nonce || uint32be(2). After decryption the GLB header's
 total-length field is rewritten to the real length. This mirrors
@@ -28,7 +28,7 @@ _KEY = b'JSON{"accessors":[{"bufferView":'
 _HEADER_SIZE = 32
 _ENCRYPTED_SIZE = 8192
 _TAG_SIZE = 16
-_MIN_SIZE = _HEADER_SIZE + _ENCRYPTED_SIZE + _TAG_SIZE
+_MIN_SIZE = _HEADER_SIZE + 12 + _TAG_SIZE  # Even tiny models have a 12-byte GLB header.
 
 _DOCS = "https://github.com/dedzedofficial/Meshy-Importer-for-Blender-Unity/blob/main/TROUBLESHOOTING.md"
 HELP_WRONG_FILE = _DOCS + "#wrong-file-errors"
@@ -179,8 +179,9 @@ def decode_meshy_bytes(data):
     if problem:
         raise MeshyFormatError(problem + " Help: " + HELP_WRONG_FILE)
     nonce = data[10:22]
-    first = aes_ctr(data[_HEADER_SIZE:_HEADER_SIZE + _ENCRYPTED_SIZE], _KEY, nonce)
-    glb = bytearray(first + data[_MIN_SIZE:])
+    encrypted_size = min(_ENCRYPTED_SIZE, len(data) - _HEADER_SIZE - _TAG_SIZE)
+    first = aes_ctr(data[_HEADER_SIZE:_HEADER_SIZE + encrypted_size], _KEY, nonce)
+    glb = bytearray(first + data[_HEADER_SIZE + encrypted_size + _TAG_SIZE:])
     if len(glb) < 12 or glb[:4] != b"glTF":
         raise MeshyFormatError("Meshy decryption produced an invalid GLB header. Meshy may have "
                                "changed the .meshy format; update the importer or report the file. "
@@ -197,8 +198,7 @@ def decode_meshy_file(path):
 def encode_meshy_bytes(glb, nonce=b"\x00" * 12):
     """Wrap a GLB in the .meshy layout. Used by the tests to build fixtures."""
     glb = bytes(glb)
-    if len(glb) < _ENCRYPTED_SIZE:
-        glb = glb + b"\x00" * (_ENCRYPTED_SIZE - len(glb))
+    encrypted_size = min(len(glb), _ENCRYPTED_SIZE)
     header = MESHY_MAGIC + b"\x00\x00" + bytes(nonce) + b"\x00" * 10
-    enc = aes_ctr(glb[:_ENCRYPTED_SIZE], _KEY, bytes(nonce))
-    return header + enc + b"\x00" * _TAG_SIZE + glb[_ENCRYPTED_SIZE:]
+    enc = aes_ctr(glb[:encrypted_size], _KEY, bytes(nonce))
+    return header + enc + b"\x00" * _TAG_SIZE + glb[encrypted_size:]

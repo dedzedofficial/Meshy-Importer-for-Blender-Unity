@@ -33,6 +33,17 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual(len(meshy), len(glb) + 32 + 16)
         self.assertEqual(decode.decode_meshy_bytes(meshy), glb)
 
+    def test_small_meshy_containers_round_trip(self):
+        # Regression: a real 7804-byte .meshy file holds a 7756-byte GLB.
+        # Sizes below 8192 and non-aligned encrypted lengths must be supported.
+        for size in (64, 7756, 8192, 8193):
+            with self.subTest(size=size):
+                glb = self._glb(size)
+                meshy = decode.encode_meshy_bytes(glb, b"\x03" * 12)
+                self.assertEqual(len(meshy), len(glb) + 32 + 16)
+                self.assertIsNone(decode.describe_wrong_file(meshy))
+                self.assertEqual(decode.decode_meshy_bytes(meshy), glb)
+
     def test_length_field_is_rewritten(self):
         glb = bytearray(self._glb(9000))
         struct.pack_into("<I", glb, 8, 123)  # Meshy's header length is not trustworthy
@@ -44,7 +55,11 @@ class ContainerTests(unittest.TestCase):
             decode.decode_meshy_bytes(b"NOTMESHY" + b"\x00" * 9000)
 
     def test_rejects_short_file(self):
-        with self.assertRaises(decode.MeshyFormatError):
+        with self.assertRaisesRegex(decode.MeshyFormatError, "cut off"):
+            decode.decode_meshy_bytes(b"MESHY.AI" + b"\x00" * 20)
+
+    def test_rejects_invalid_short_encrypted_container(self):
+        with self.assertRaisesRegex(decode.MeshyFormatError, "invalid GLB header"):
             decode.decode_meshy_bytes(b"MESHY.AI" + b"\x00" * 100)
 
     def test_rejects_renamed_glb(self):

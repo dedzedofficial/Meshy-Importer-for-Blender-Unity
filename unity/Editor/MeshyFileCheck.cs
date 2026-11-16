@@ -18,7 +18,7 @@ namespace FISHHWB.MeshyImporter.Editor
         /// </summary>
         public static string DescribeWrongFile(byte[] data)
         {
-            const int minSize = 32 + 8192 + 16;
+            const int minSize = 32 + 12 + 16; // Header + minimal GLB header + tag. Small models are valid.
             if (data == null || data.Length == 0)
                 return "The file is empty. The download probably failed; save the model response again.";
             if (StartsWith(data, 0, "MESHY.AI"))

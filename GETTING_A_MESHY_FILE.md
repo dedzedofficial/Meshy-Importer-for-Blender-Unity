@@ -24,7 +24,7 @@ If your model is not captured, use the manual method below. The extension is opt
 A real `.meshy` file:
 
 - starts with the text **`MESHY.AI`** (open it in a text editor to check; the rest looks like gibberish), and
-- is usually **several megabytes** in size.
+- can range from a few kilobytes to many megabytes. A file smaller than 8 KiB can be valid.
 
 If you picked the wrong request, the importer tells you what you saved instead, for example "This is a web page (HTML), not the model" or "This is a JSON API response". Go back to step 6 and try the next-largest request.
 
